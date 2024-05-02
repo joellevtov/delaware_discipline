@@ -1,0 +1,90 @@
+
+.DS_Store
+2020-21-crdc-data/.DS_Store
+2020-21-crdc-data/CRDC/.DS_Store
+2020-21-crdc-data/CRDC/LEA/Distance Education.csv
+2020-21-crdc-data/CRDC/LEA/High School Equivalency.csv
+2020-21-crdc-data/CRDC/LEA/LEA Characteristics.csv
+2020-21-crdc-data/CRDC/School/Advanced Mathematics.csv
+2020-21-crdc-data/CRDC/School/Advanced Placement.csv
+2020-21-crdc-data/CRDC/School/Algebra I.csv
+2020-21-crdc-data/CRDC/School/Algebra II.csv
+2020-21-crdc-data/CRDC/School/Biology.csv
+2020-21-crdc-data/CRDC/School/Calculus.csv
+2020-21-crdc-data/CRDC/School/Chemistry.csv
+2020-21-crdc-data/CRDC/School/Computer Science.csv
+2020-21-crdc-data/CRDC/School/Corporal Punishment.csv
+2020-21-crdc-data/CRDC/School/COVID Directional Indicators.csv
+2020-21-crdc-data/CRDC/School/Dual Enrollment.csv
+2020-21-crdc-data/CRDC/School/Enrollment.csv
+2020-21-crdc-data/CRDC/School/Expulsions.csv
+2020-21-crdc-data/CRDC/School/Geometry.csv
+2020-21-crdc-data/CRDC/School/Gifted and Talented.csv
+2020-21-crdc-data/CRDC/School/Harassment and Bullying.csv
+2020-21-crdc-data/CRDC/School/International Baccalaureate.csv
+2020-21-crdc-data/CRDC/School/Internet Access and Devices.csv
+2020-21-crdc-data/CRDC/School/Justice Facilities.csv
+2020-21-crdc-data/CRDC/School/Offenses.csv
+2020-21-crdc-data/CRDC/School/Physics.csv
+2020-21-crdc-data/CRDC/School/Referrals and Arrests.csv
+2020-21-crdc-data/CRDC/School/Restraint and Seclusion.csv
+2020-21-crdc-data/CRDC/School/Retention.csv
+2020-21-crdc-data/CRDC/School/SAT and ACT.csv
+2020-21-crdc-data/CRDC/School/School Characteristics.csv
+2020-21-crdc-data/CRDC/School/School Support.csv
+2020-21-crdc-data/CRDC/School/Single sex Athletics.csv
+2020-21-crdc-data/CRDC/School/Single sex Classes.csv
+2020-21-crdc-data/CRDC/School/Suspensions.csv
+2020-21-crdc-data/CRDC/School/Transfers.csv
+2020-21-crdc-data/EDFacts/.DS_Store
+2020-21-crdc-data/EDFacts/FS002 DG74/ID 74 SCH - Educational Environment by Gender by Disability.csv
+2020-21-crdc-data/EDFacts/FS002 DG74/ID 74 SCH - Race by Placement.csv
+2020-21-crdc-data/EDFacts/FS002 DG74/ID 74 SCH - Race by Sex by Disability plus LEP_AUT.csv
+2020-21-crdc-data/EDFacts/FS002 DG74/ID 74 SCH - Race by Sex by Disability plus LEP_DB.csv
+2020-21-crdc-data/EDFacts/FS002 DG74/ID 74 SCH - Race by Sex by Disability plus LEP_DD.csv
+2020-21-crdc-data/EDFacts/FS002 DG74/ID 74 SCH - Race by Sex by Disability plus LEP_EMN.csv
+2020-21-crdc-data/EDFacts/FS002 DG74/ID 74 SCH - Race by Sex by Disability plus LEP_HI.csv
+2020-21-crdc-data/EDFacts/FS002 DG74/ID 74 SCH - Race by Sex by Disability plus LEP_ID.csv
+2020-21-crdc-data/EDFacts/FS002 DG74/ID 74 SCH - Race by Sex by Disability plus LEP_MD.csv
+2020-21-crdc-data/EDFacts/FS002 DG74/ID 74 SCH - Race by Sex by Disability plus LEP_MISSING.csv
+2020-21-crdc-data/EDFacts/FS002 DG74/ID 74 SCH - Race by Sex by Disability plus LEP_OHI.csv
+2020-21-crdc-data/EDFacts/FS002 DG74/ID 74 SCH - Race by Sex by Disability plus LEP_OI.csv
+2020-21-crdc-data/EDFacts/FS002 DG74/ID 74 SCH - Race by Sex by Disability plus LEP_SLD.csv
+2020-21-crdc-data/EDFacts/FS002 DG74/ID 74 SCH - Race by Sex by Disability plus LEP_SLI.csv
+2020-21-crdc-data/EDFacts/FS002 DG74/ID 74 SCH - Race by Sex by Disability plus LEP_TBI.csv
+2020-21-crdc-data/EDFacts/FS002 DG74/ID 74 SCH - Race by Sex by Disability plus LEP_VI.csv
+2020-21-crdc-data/EDFacts/FS195 DG814/ID 814 SCH - Chronic Absenteeism.csv
+all_results_graph.png
+all_state_results.csv
+app.rmd
+Data_Dictionary_STUDENTDISCIPLINE.pdf
+delaware_discipline_statewide_in_school_suspensions.csv
+delaware_discipline_statewide_out_of_school_suspensions.csv
+delaware_discipline_statewide_out_of_school_suspensions_WITHOUT_CDAP.csv
+delaware_discipline_statewide_overall.csv
+delaware_out_of_school_suspensions.png
+delawarediscipline/
+expulsions.csv
+federal_discipline.nb.html
+federal_discipline.Rmd
+function_practice.r
+in_school_all_districts.csv
+in_school_all_results.png
+renderings/delaware_expulsions_graph.png
+renderings/delaware_out_of_school_cdap_suspensions_graph.png
+renderings/delaware_out_of_school_wo_cdap_suspensions_graph.png
+renderings/delaware_per_capita_discipline_statwide_graph.png
+renderings/in-school_discipline_rates_delaware.png
+renderings/length_of_suspension_graph.png
+renderings/median_overall_suspension_length.png
+renderings/overall_discipline_rates_delaware.png
+source files/.gitattributes
+source files/2020-21-crdc-data.zip
+source files/crdc data definitions.xlsx
+source files/crdc data.xlsx
+source files/delaware_discipline_statewide_in_school_suspensions.csv
+source files/delaware_discipline_statewide_out_of_school_suspensions.csv
+source files/delaware_discipline_statewide_out_of_school_suspensions_WITHOUT_CDAP.csv
+source files/delaware_discipline_statewide_overall.csv
+source files/expulsions.csv
+source files/Student_Discipline 1 copy.xlsx
