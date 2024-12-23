@@ -1,0 +1,8 @@
+race,discipline_type,students_enrolled,num_disc_students,num_incidents,length_in_days,per_capita
+Hispanic/Latino,Out-of-School Suspension,26313,1519,2617,2.81,0.0994565423934937
+Native American,Out-of-School Suspension,623,48,94.5,2.865,0.15168539325842698
+African American,Out-of-School Suspension,44970,6476,12471,2.64,0.2773182121414276
+White,Out-of-School Suspension,62855,2622,4209,3.09,0.06696364648794845
+Asian American,Out-of-School Suspension,6111,79,117.5,2.065,0.019227622320405827
+Multi-Racial,Out-of-School Suspension,6063,424,919,2.83,0.15157512782450933
+Native Hawaiian/Pacific Islander,Out-of-School Suspension,201,11,19.5,2.7350000000000003,0.09701492537313433

@@ -1,0 +1,8 @@
+race,discipline_type,students_enrolled,num_disc_students,num_incidents,length_in_days,per_capita
+Hispanic/Latino,In-School Suspension,26313,1357,2576,1.07,0.09789837722798617
+Native American,In-School Suspension,623,34.5,73,1.115,0.11717495987158909
+African American,In-School Suspension,44970,4763,9797,1.05,0.2178563486768957
+White,In-School Suspension,62855,2587,4625,1.08,0.07358205393365683
+Asian American,In-School Suspension,6111,62,96.5,1.045,0.015791196203567337
+Multi-Racial,In-School Suspension,6063,424,868,1.09,0.14316345043707734
+Native Hawaiian/Pacific Islander,In-School Suspension,201,12.5,21,1.04,0.1044776119402985

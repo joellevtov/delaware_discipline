@@ -801,9 +801,8 @@ results_list <- foreach(district = district_codes, .combine = bind_rows) %dopar%
             result <- process_race_data(delaware_pop, delaware_discipline, district, race,
                                         grade_query = NULL, gender_query = NULL, disc_type = category)
 
-            # Replace with 0
-            per_capita <- ifelse(is.null(result$per_capita), 0, result$per_capita)
-            per_capita <- ifelse(is.na(result$per_capita), 0, result$per_capita)
+            # Check if per_capita is NULL and replace with NA
+            per_capita <- ifelse(is.null(result$per_capita), NA, result$per_capita)
 
             # Create a new row as a tibble
             new_row <- tibble(

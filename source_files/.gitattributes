@@ -1,0 +1,5 @@
+delaware_student_discipline_raw.csv filter=lfs diff=lfs merge=lfs -text
+Student_Enrollment_20240209.csv filter=lfs diff=lfs merge=lfs -text
+2021-21-crdc-data.zip filter=lfs diff=lfs merge=lfs -text
+2020-21-crdc-data.zip filter=lfs diff=lfs merge=lfs -text
+Student_Enrollment_20240216.csv filter=lfs diff=lfs merge=lfs -text
