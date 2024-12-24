@@ -61,18 +61,20 @@ subgroupdata <- function(subgroup_query, discipline_df) {
             filter(str_detect(sub_group, regex(subgroup_query, ignore_case = TRUE)))  |>
             filter(!str_detect(sub_group, regex("non", ignore_case = TRUE)))
     # This else if block detects whether the query contains 'non' without a hyphen - if it does, it will add a hyphen after 'non' and run the looking_for_non function 
-    } else if (str_detect(subgroup_query, regex("non(?!-)", ignore_case = TRUE))) {
+    } 
+    else if (str_detect(subgroup_query, regex("non(?!-)", ignore_case = TRUE))) {
         # Add hyphen after "non"
         subgroup_query <- str_replace(subgroup_query, regex("non(?!-)", ignore_case = TRUE), "non-") 
         print(subgroup_query)
         filtered <- looking_for_non(subgroup_query, discipline_df)
     # The else block runs in the case that there is a non already with a hyphen
-} else {
+} 
+else {
     filtered <- looking_for_non(subgroup_query, discipline_df)
 }
     return(filtered)
-}
-results <- subgroupdata(subgroup_query="all            ", delaware_discipline) |> select(sub_group)
+} 
+results <- subgroupdata(subgroup_query="all", delaware_discipline) |> select(sub_group)
 head(results)
 ```
 

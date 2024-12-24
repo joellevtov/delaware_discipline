@@ -122,10 +122,10 @@ number of students of all races, write "all" (any capitalization), leave
 the argument out, or write "NULL".
 
 ```{r}
-process_race_data <- function(pop_df, discipline_df, dis_code, race_name, grade_query=NULL, gender_query=NULL, disc_type=NULL, subgroup_query=NULL) {
+process_race_data <- function(pop_df, discipline_df, dis_code, race_name, subgroup_query=NULL, grade_query=NULL, gender_query=NULL, disc_type=NULL) {
     # Function definitions
     # this function calculates the average number of incidents for each racial category
-    find_num_incidents <- function(discipline_df, dis_code, race_name = NULL, grade_query = NULL, gender_query = NULL, disc_type = NULL, subgroup_query=NULL) {
+    find_num_incidents <- function(discipline_df, dis_code, race_name = NULL, subgroup_query=NULL, grade_query = NULL, gender_query = NULL, disc_type = NULL) {
         # Start with filtering district_code
         filtered <- discipline_df |> 
             filter(district_code == dis_code) 
@@ -134,12 +134,39 @@ process_race_data <- function(pop_df, discipline_df, dis_code, race_name, grade_
         if (is.null(race_name) || tolower(race_name) == "all") {
             filtered <- filtered |>  
             filter(race == "All Students")
-        } else {
+        } 
+        else {
             filtered <- filtered |> 
             filter(race == race_name)
         }
         # Applying a filter for sub_group. It's mostly useless, honestly, because for most groups - even at the state level - the data on race + population is redacted (i.e., the number of e.g. homeless students who are Asian)
-       
+        subgroupdata <- function(subgroup_query, discipline_df) {
+        # The below function will handle any queries that have a 'non' inside of them, e.g. 'non-homeless'
+        looking_for_non <- function(subgroup_query, discipline_df) {
+            filtered <- discipline_df |> 
+                filter(str_detect(sub_group, regex(subgroup_query, ignore_case = TRUE)))
+            return(filtered)
+        } 
+        if (is.null(subgroup_query) || str_detect(subgroup_query, regex("all", ignore_case=TRUE))){
+            filtered <- discipline_df
+        } 
+        else if (str_detect(subgroup_query, regex("non", ignore_case = TRUE), negate = TRUE)) { 
+            filtered <- discipline_df |>
+                filter(str_detect(sub_group, regex(subgroup_query, ignore_case = TRUE)))  |>
+                filter(!str_detect(sub_group, regex("non", ignore_case = TRUE)))
+        # This else if block detects whether the query contains 'non' without a hyphen - if it does, it will add a hyphen after 'non' and run the looking_for_non function 
+        } 
+        else if (str_detect(subgroup_query, regex("non(?!-)", ignore_case = TRUE))) {
+            # Add hyphen after "non"
+            subgroup_query <- str_replace(subgroup_query, regex("non(?!-)", ignore_case = TRUE), "non-") 
+            print(subgroup_query)
+            filtered <- looking_for_non(subgroup_query, discipline_df)
+        # The else block runs in the case that there is a non already with a hyphen
+        } else {
+            filtered <- looking_for_non(subgroup_query, discipline_df)
+        }
+            return(filtered)
+        } 
         # Apply filter for grade_query. Uses str_detect for partial matches in case race name isn't spelled out like database lists it. Default to "All Students" if "all" or NULL
         if (is.null(grade_query) || tolower(grade_query) == "all") {
             filtered <- filtered |>  
@@ -166,7 +193,7 @@ process_race_data <- function(pop_df, discipline_df, dis_code, race_name, grade_
     }    
 
     # this function calculates the average number of students disciplined for the provided filters
-    find_num_disc_students <- function(discipline_df, dis_code, race_name = NULL, subgroup_query=NULL, grade_query = NULL, gender_query = NULL, disc_type = NULL) {
+    find_num_disc_students <- function(discipline_df, dis_code, race_name = NULL, subgroup_query=NULL, subgroup_query=NULL, grade_query = NULL, gender_query = NULL, disc_type = NULL) {
         filtered <- discipline_df |> 
             filter(district_code == dis_code) 
     
