@@ -13,21 +13,18 @@ Get started, loading & cleaning the data.
 options(scipen=999) 
 library(tidyverse)
 library(janitor)
-library(magrittr) # use magrittr if you want to replicate the function of the tidyverse |> character in vscode or a similar program - this code uses the |> character a lot
-library(dplyr)
 library(ggthemes)
-library(stringr)
-library(purrr)
+setwd('/Users/joellevtov/Library/CloudStorage/OneDrive-JoelLev-Tov/Journalism/delaware_discipline')
 
 # Remove comment from the below read_csv line as necessary.
-delaware_discipline <- read_csv("/Users/joellevtov/Library/CloudStorage/GoogleDrive-levtov@terpmail.umd.edu/My Drive/Journalism/delawarediscipline/source files/delaware_student_discipline_raw.csv") |> 
+delaware_discipline <- read_csv("source_files/delaware_student_discipline_raw.csv") |> 
     clean_names() |> 
     select(!geography) #the geography column reads either "All Students" or, for redacted rows, "NA" - so this will ignore the column
 delaware_discipline$sub_group <- str_replace(delaware_discipline$sub_group, regex("Asian", ignore_case = TRUE), "Asian American") 
 delaware_discipline$category <- str_replace(delaware_discipline$category, regex("Out-of-School Suspension, No CDAP Placement", ignore_case = TRUE), "Out-of-School Suspension without CDAP Placement")
 
 # The raw data has two different phrases that mean the same thing - "Out-of-School Suspension, No CDAP Placement" and "Out-of-School Suspension without CDAP Placement". For clarity, I replaced the latter with the former.
-delaware_pop <- read_csv("/Users/joellevtov/Library/CloudStorage/GoogleDrive-levtov@terpmail.umd.edu/My Drive/Journalism/delawarediscipline/source files/Student_Enrollment_20240216.csv") |> 
+delaware_pop <- read_csv("source_files/Student_Enrollment_20240216.csv") |> 
     clean_names()
 delaware_pop$grade <- str_replace(delaware_pop$grade, regex("Twelfth", ignore_case=TRUE), "12th Grade")
 delaware_pop$sub_group <- str_replace(delaware_pop$sub_group, regex("Asian", ignore_case = TRUE), "Asian American")
@@ -46,6 +43,7 @@ name_black <- race_categories[4,1]
 name_asian_am <- race_categories[5,1]
 name_multi_racial <- race_categories[6,1]
 name_hawaiian_pi <- race_categories[7,1]
+# This function will make sure the labels are all correct.
 print_var_name_and_value <- function(x) {
   # Capture and print the variable name
   var_name <- deparse(substitute(x))
@@ -117,17 +115,17 @@ of a discipline measure in days
 The process_race_data function is a one-stop shop to calculating
 everything we could want. One can specify the following parameters: -
 District Code (this argument is mandatory) - Race (mandatory) - Grade (not mandatory; if no input defaults to "all students") - Gender (not mandatory; if no input defaults to "all students") -
-Discipline type (not mandatory: if no input, no argument is passed; i.e. in-school suspension, out-of-school suspension,
-expulsion)
+Discipline type (not mandatory: if no input, no argument is passed; i.e. in-school suspension, out-of-school suspension, expulsion) - Sub-group (not mandatory)
 
 If interested in all students in a particular category, e.g. the average
 number of students of all races, write "all" (any capitalization), leave
 the argument out, or write "NULL".
 
 ```{r}
-process_race_data <- function(pop_df, discipline_df, dis_code, race_name, grade_query=NULL, gender_query=NULL, disc_type=NULL) {
-    # this function calculates the average number of incidents per race
-    find_num_incidents <- function(discipline_df, dis_code, race_name = NULL, grade_query = NULL, gender_query = NULL, disc_type = NULL) {
+process_race_data <- function(pop_df, discipline_df, dis_code, race_name, grade_query=NULL, gender_query=NULL, disc_type=NULL, subgroup=NULL) {
+    # Function definitions
+    # this function calculates the average number of incidents for each racial category
+    find_num_incidents <- function(discipline_df, dis_code, race_name = NULL, grade_query = NULL, gender_query = NULL, disc_type = NULL, subgroup=NULL) {
         # Start with filtering district_code
         filtered <- discipline_df |> 
             filter(district_code == dis_code) 
@@ -138,9 +136,10 @@ process_race_data <- function(pop_df, discipline_df, dis_code, race_name, grade_
             filter(race == "All Students")
         } else {
             filtered <- filtered |> 
-            filter(race == race_name) |> 
-            filter(sub_group == race_name)
+            filter(race == race_name)
         }
+        # Applying a filter for sub_group. It's mostly useless, honestly, because for most groups - even at the state level - the data on race + population is redacted (i.e., the number of e.g. homeless students who are Asian)
+        # INSERT CODE HERE!!!!!!
         # Apply filter for grade_query. Uses str_detect for partial matches in case race name isn't spelled out like database lists it. Default to "All Students" if "all" or NULL
         if (is.null(grade_query) || tolower(grade_query) == "all") {
             filtered <- filtered |>  
@@ -203,7 +202,7 @@ process_race_data <- function(pop_df, discipline_df, dis_code, race_name, grade_
 
     # this function calculates the number of students in a given circumstance, e.g. the number of Black students in fourth grade
     find_pop <- function(pop_df, dis_code, race_name = NULL, grade_query = NULL, gender_query = NULL, disc_type = NULL) { 
-        filtered <- pop_df |> # .data takes the population dataframe
+        filtered <- pop_df |> 
             filter(district_code== dis_code)
         
         if (is.null(race_name) || tolower(race_name) == "all") {
@@ -232,22 +231,26 @@ process_race_data <- function(pop_df, discipline_df, dis_code, race_name, grade_
         return(median_students)
     }
 
+    # this function calculates the length of a discipline measure
     length_of_discipline <- function(discipline_df, dis_code, race_name = NULL, grade_query = NULL, gender_query = NULL, disc_type = NULL) {
         filtered <- discipline_df |> 
             filter(district_code == dis_code) 
         
+        # As above, will default to all students if there's no value provided
         if (is.null(race_name) || tolower(race_name) == "all") {
             filtered <- filtered |>  
             filter(race == "All Students")
         } else {
             filtered <- filtered |> filter(race == race_name) |> filter(sub_group == race_name)
         }
+        # The same is true for the grade
         if (is.null(grade_query) || tolower(grade_query) == "all") {
             filtered <- filtered |>  
             filter(grade == "All Students")
         } else {
             filtered <- filtered |>  filter(str_detect(grade, regex(grade_query, ignore_case = TRUE)))
         }
+        # The same is true for the gender (note that there's only male and female in the data)
         if (is.null(gender_query) || tolower(gender_query) == "all") {
             filtered <- filtered |> 
             filter(gender == "All Students")
@@ -255,6 +258,7 @@ process_race_data <- function(pop_df, discipline_df, dis_code, race_name, grade_
             filtered <- filtered |> 
             filter(gender == gender_query)
         }
+        # This filters for what type of discipline (i.e. out of school suspension, in-school suspension, etc.)
         if (!is.null(disc_type) && tolower(disc_type) != "all") {
             filtered <- filtered |> 
             filter(category == disc_type)
@@ -295,7 +299,7 @@ hawaiian_pi_incidents <- process_race_data(delaware_pop, delaware_discipline, 0,
 print(hawaiian_pi_incidents)
 ```
 
-A word of caution - make sure asian_am_incidents is NOT 'NA'. The code
+A word of caution - make sure no values in asian_am_incidents are 'NA'. The code
 seems to be correct but R does not consistently replace "Asian" with
 "Asian American" in sub_group, it seems. If it does come up with 'NA'
 for asian_am_incidents, try quitting R, re-starting, and re-rerunning
@@ -322,7 +326,7 @@ overall <- overall |>
 print(overall)
 
 # replace with the correct path for your computer
-write_csv(overall, "/Users/joellevtov/Library/CloudStorage/GoogleDrive-levtov@terpmail.umd.edu/My Drive/Journalism/delawarediscipline/delaware_discipline_statewide_overall.csv")
+write_csv(overall, "delaware_discipline_statewide_overall.csv")
 
 overall_graph <- overall |> 
   mutate(race_ordered = fct_reorder(race, per_capita)) # Assuming 'race' is the column you want on x-axis
@@ -394,7 +398,7 @@ in_school_suspensions <- in_school_suspensions |>
     relocate(discipline_type, .after=race)
 print(in_school_suspensions)
 
-write_csv(in_school_suspensions, "/Users/joellevtov/Library/CloudStorage/GoogleDrive-levtov@terpmail.umd.edu/My Drive/Journalism/delawarediscipline/delaware_discipline_statewide_in_school_suspensions.csv")
+write_csv(in_school_suspensions, "delaware_discipline_statewide_in_school_suspens.csv")
 
 in_school_suspensions_graph <- in_school_suspensions |> 
   mutate(race_ordered = fct_reorder(race, per_capita)) # Assuming 'race' is the column you want on x-axis
@@ -417,7 +421,7 @@ print(in_school_suspensions_graph)
 ggsave("renderings/in-school_discipline_rates_delaware.png", in_school_suspensions_graph)
 ```
 
-Very interesting. Now, let's see about out-of-school suspensions.
+Very interesting - Black, followed by multi-racial students are most likely to face in-school discipline, considering the population. Now, let's see about out-of-school suspensions - does the trend continue?
 ```{r}
 hisp_oos_cdap <- process_race_data(delaware_pop, delaware_discipline, 0, name_hisp, NULL, NULL, name_oos_cdap)
 print(hisp_oos_cdap)
@@ -503,7 +507,7 @@ out_of_school_wo_cdap_suspensions <- out_of_school_wo_cdap_suspensions |>
     relocate(discipline_type, .after=race)
 print(out_of_school_wo_cdap_suspensions)
 
-write_csv(out_of_school_wo_cdap_suspensions, "/Users/joellevtov/Library/CloudStorage/GoogleDrive-levtov@terpmail.umd.edu/My Drive/Journalism/delawarediscipline/delaware_discipline_statewide_out_of_school_suspensions_WITHOUT_CDAP.csv")
+write_csv(out_of_school_wo_cdap_suspensions, "delaware_discipline_statewide_out_of_school_suspensions_WITHOUT_CDAP.csv")
 
 # this will transform any rows with only 'NA' values to 0 so R can sort it without throwing an error.
 out_of_school_wo_cdap_suspensions_graph <- out_of_school_wo_cdap_suspensions |> 
@@ -573,7 +577,7 @@ oos <- oos |>
     relocate(discipline_type, .after=race)
 print(oos)
 
-write_csv(oos, "/Users/joellevtov/Library/CloudStorage/GoogleDrive-levtov@terpmail.umd.edu/My Drive/Journalism/delawarediscipline/delaware_discipline_statewide_out_of_school_suspensions.csv")
+write_csv(oos, "delaware_discipline_statewide_out_of_school_suspensions.csv")
 
 # this will transform any rows with only 'NA' values to 0 so r can sort it without throwing an error.
 oos_graph <- oos |> 
@@ -638,7 +642,7 @@ expulsions_graph <- expulsions |>
       avg_length = if_else(is.na(length_in_days), 0, length_in_days),
       avg_per_capita_disciplines = if_else(is.na(per_capita), 0, per_capita)
     )
-write_csv(expulsions, "/Users/joellevtov/Library/CloudStorage/GoogleDrive-levtov@terpmail.umd.edu/My Drive/Journalism/delawarediscipline/expulsions.csv")
+write_csv(expulsions, "expulsions.csv")
 
 expulsions_graph <- expulsions_graph |> 
   mutate(race_ordered = fct_reorder(race, avg_per_capita_disciplines)) # Assuming 'race' is the column you want on x-axis

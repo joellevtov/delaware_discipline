@@ -1,0 +1,63 @@
+ff
+``` {r}
+library(tidyverse)
+library(janitor)
+```
+
+``` {r}
+setwd('/Users/joellevtov/Library/CloudStorage/OneDrive-JoelLev-Tov/Journalism/delaware_discipline')
+```
+
+``` {r}
+delaware_discipline <- read_csv("source_files/delaware_student_discipline_raw.csv") |> 
+    clean_names() |> 
+    select(!geography) #the geography column reads either "All Students" or, for redacted rows, "NA" - so this will ignore the column
+delaware_discipline$sub_group <- str_replace(delaware_discipline$sub_group, regex("Asian", ignore_case = TRUE), "Asian American") 
+delaware_discipline$category <- str_replace(delaware_discipline$category, regex("Out-of-School Suspension, No CDAP Placement", ignore_case = TRUE), "Out-of-School Suspension without CDAP Placement")
+
+# The raw data has two different phrases that mean the same thing - "Out-of-School Suspension, No CDAP Placement" and "Out-of-School Suspension without CDAP Placement". For clarity, I replaced the latter with the former.
+delaware_pop <- read_csv("source_files/Student_Enrollment_20240216.csv") |> 
+    clean_names()
+delaware_pop$grade <- str_replace(delaware_pop$grade, regex("Twelfth", ignore_case=TRUE), "12th Grade")
+delaware_pop$sub_group <- str_replace(delaware_pop$sub_group, regex("Asian", ignore_case = TRUE), "Asian American")
+```
+
+Non-function tests
+``` {r}
+subgroup_test <- delaware_discipline |> 
+    filter(str_detect(sub_group, regex("homeless", ignore_case = TRUE)))
+print(subgroup_test)
+
+subgroup_test <- delaware_discipline |> 
+    filter(str_detect(sub_group, "All Students")) |> 
+    select(sub_group)
+print(subgroup_test)
+
+non_in_subgroup_query_test <- delaware_discipline |> 
+    filter(str_detect(sub_group, regex("homeless", ignore_case = TRUE))) |> 
+    filter(!str_detect(sub_group, regex("non", ignore_case = TRUE))) |> 
+    select(sub_group)
+print(non_in_subgroup_query_test)
+```
+
+Function test
+This function will allow us to search inside the sub_group category, for example for homeless students. This one is a bit different than the other columns because the entries often have a 'non' inside, i.e. non-homeless or non-SWD. That presents a bit of a challenge because I have made the code search for anything that contains the query - think of a Cntl+F search in a PDF - it will show you anything that contains the characters you're looking for. 
+``` {r}
+# WORK IN PROGRESS
+subgroupdata <- function(subgroup_query, discipline_df) {
+    if (str_detect(subgroup_query, regex("non", ignore_case = TRUE), negate = TRUE)) { 
+        filtered <- discipline_df |>
+            filter(str_detect(sub_group, regex(subgroup_query, ignore_case = TRUE)))  |>
+            filter(!str_detect(sub_group, regex("non", ignore_case = TRUE))) 
+    } else if (str_detect(subgroup, regex("non", ignore_case = TRUE))) { 
+        filtered <- discipline_df |> 
+            filter(str_detect(sub_group, regex(subgroup_query, ignore_case=TRUE)))
+    }
+    return(filtered)
+}
+results <- subgroupdata("non-HOMELESS", delaware_discipline)
+print(results)
+```
+
+
+LINE 146
