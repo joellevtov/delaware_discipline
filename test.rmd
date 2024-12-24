@@ -45,19 +45,37 @@ This function will allow us to search inside the sub_group category, for example
 ``` {r}
 # WORK IN PROGRESS
 subgroupdata <- function(subgroup_query, discipline_df) {
+    # The below function will handle any queries that have a 'non' inside of them, e.g. 'non-homeless'
+     looking_for_non <- function(subgroup_query, discipline_df) {
+        filtered <- discipline_df |> 
+            filter(str_detect(sub_group, regex(subgroup_query, ignore_case = TRUE)))
+        return(filtered)
+        }
+    # The if block only runs if there is NO 'non' in the query 
     if (str_detect(subgroup_query, regex("non", ignore_case = TRUE), negate = TRUE)) { 
         filtered <- discipline_df |>
             filter(str_detect(sub_group, regex(subgroup_query, ignore_case = TRUE)))  |>
-            filter(!str_detect(sub_group, regex("non", ignore_case = TRUE))) 
-    } else if (str_detect(subgroup, regex("non", ignore_case = TRUE))) { 
-        filtered <- discipline_df |> 
-            filter(str_detect(sub_group, regex(subgroup_query, ignore_case=TRUE)))
-    }
+            filter(!str_detect(sub_group, regex("non", ignore_case = TRUE)))
+    # The else if block detects whether the query contains 'non' without a hyphen - if it does, it will add a hyphen after 'non' and run the looking_for_non function 
+    } else if (str_detect(subgroup_query, regex("non(?!-)", ignore_case = TRUE))) {
+        # Add hyphen after "non"
+        subgroup_query <- str_replace(subgroup_query, regex("non(?!-)", ignore_case = TRUE), "non-") 
+        print(subgroup_query)
+        filtered <- looking_for_non(subgroup_query, discipline_df)
+    # The else block runs in the case that there is a non already with a hyphen
+} else {
+    filtered <- looking_for_non(subgroup_query, discipline_df)
+}
     return(filtered)
 }
-results <- subgroupdata("non-HOMELESS", delaware_discipline)
-print(results)
+results <- subgroupdata("NonHomeless", delaware_discipline) |> select(sub_group)
+head(results)
 ```
 
 
 LINE 146
+
+how would i write r code that looks for if the query entered no hyphen AND contains "non". if this is true, i need it to add a hyphen after the non-. here is what i have so far:
+``` {r}
+
+```
