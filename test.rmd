@@ -51,12 +51,16 @@ subgroupdata <- function(subgroup_query, discipline_df) {
             filter(str_detect(sub_group, regex(subgroup_query, ignore_case = TRUE)))
         return(filtered)
         }
-    # The if block only runs if there is NO 'non' in the query 
-    if (str_detect(subgroup_query, regex("non", ignore_case = TRUE), negate = TRUE)) { 
+
+    if (is.null(subgroup_query) || str_detect(subgroup_query, regex("all", ignore_case=TRUE))){
+        filtered <- discipline_df
+    }
+    # This elif block only runs if there is NO 'non' in the query and the query isn't "all" or null 
+    else if (str_detect(subgroup_query, regex("non", ignore_case = TRUE), negate = TRUE)) { 
         filtered <- discipline_df |>
             filter(str_detect(sub_group, regex(subgroup_query, ignore_case = TRUE)))  |>
             filter(!str_detect(sub_group, regex("non", ignore_case = TRUE)))
-    # The else if block detects whether the query contains 'non' without a hyphen - if it does, it will add a hyphen after 'non' and run the looking_for_non function 
+    # This else if block detects whether the query contains 'non' without a hyphen - if it does, it will add a hyphen after 'non' and run the looking_for_non function 
     } else if (str_detect(subgroup_query, regex("non(?!-)", ignore_case = TRUE))) {
         # Add hyphen after "non"
         subgroup_query <- str_replace(subgroup_query, regex("non(?!-)", ignore_case = TRUE), "non-") 
@@ -68,7 +72,7 @@ subgroupdata <- function(subgroup_query, discipline_df) {
 }
     return(filtered)
 }
-results <- subgroupdata("NonHomeless", delaware_discipline) |> select(sub_group)
+results <- subgroupdata(subgroup_query="all            ", delaware_discipline) |> select(sub_group)
 head(results)
 ```
 

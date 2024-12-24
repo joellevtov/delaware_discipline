@@ -122,10 +122,10 @@ number of students of all races, write "all" (any capitalization), leave
 the argument out, or write "NULL".
 
 ```{r}
-process_race_data <- function(pop_df, discipline_df, dis_code, race_name, grade_query=NULL, gender_query=NULL, disc_type=NULL, subgroup=NULL) {
+process_race_data <- function(pop_df, discipline_df, dis_code, race_name, grade_query=NULL, gender_query=NULL, disc_type=NULL, subgroup_query=NULL) {
     # Function definitions
     # this function calculates the average number of incidents for each racial category
-    find_num_incidents <- function(discipline_df, dis_code, race_name = NULL, grade_query = NULL, gender_query = NULL, disc_type = NULL, subgroup=NULL) {
+    find_num_incidents <- function(discipline_df, dis_code, race_name = NULL, grade_query = NULL, gender_query = NULL, disc_type = NULL, subgroup_query=NULL) {
         # Start with filtering district_code
         filtered <- discipline_df |> 
             filter(district_code == dis_code) 
@@ -139,7 +139,7 @@ process_race_data <- function(pop_df, discipline_df, dis_code, race_name, grade_
             filter(race == race_name)
         }
         # Applying a filter for sub_group. It's mostly useless, honestly, because for most groups - even at the state level - the data on race + population is redacted (i.e., the number of e.g. homeless students who are Asian)
-        # INSERT CODE HERE!!!!!!
+       
         # Apply filter for grade_query. Uses str_detect for partial matches in case race name isn't spelled out like database lists it. Default to "All Students" if "all" or NULL
         if (is.null(grade_query) || tolower(grade_query) == "all") {
             filtered <- filtered |>  
@@ -166,7 +166,7 @@ process_race_data <- function(pop_df, discipline_df, dis_code, race_name, grade_
     }    
 
     # this function calculates the average number of students disciplined for the provided filters
-    find_num_disc_students <- function(discipline_df, dis_code, race_name = NULL, grade_query = NULL, gender_query = NULL, disc_type = NULL) {
+    find_num_disc_students <- function(discipline_df, dis_code, race_name = NULL, subgroup_query=NULL, grade_query = NULL, gender_query = NULL, disc_type = NULL) {
         filtered <- discipline_df |> 
             filter(district_code == dis_code) 
     
@@ -175,7 +175,8 @@ process_race_data <- function(pop_df, discipline_df, dis_code, race_name, grade_
             filter(race == "All Students")
         } else {
             filtered <- filtered |> 
-            filter(race == race_name) |> 
+            filter(race == race_name) 
+            # This needs to be fixed to allow users to search subgroup
             filter(sub_group == race_name)
         }        
         if (is.null(grade_query) || tolower(grade_query) == "all") {
