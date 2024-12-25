@@ -44,7 +44,7 @@ Function test
 This function will allow us to search inside the sub_group category, for example for homeless students. This one is a bit different than the other columns because the entries often have a 'non' inside, i.e. non-homeless or non-SWD. That presents a bit of a challenge because I have made the code search for anything that contains the query - think of a Cntl+F search in a PDF - it will show you anything that contains the characters you're looking for. 
 ``` {r}
 # WORK IN PROGRESS
-subgroupdata <- function(subgroup_query, discipline_df) {
+subgroupdata <- function(subgroup_query, race_name, pl[discipline_df) {
     # The below function will handle any queries that have a 'non' inside of them, e.g. 'non-homeless'
      looking_for_non <- function(subgroup_query, discipline_df) {
         filtered <- discipline_df |> 
@@ -53,7 +53,8 @@ subgroupdata <- function(subgroup_query, discipline_df) {
         }
 
     if (is.null(subgroup_query) || str_detect(subgroup_query, regex("all", ignore_case=TRUE))){
-        filtered <- discipline_df
+        filtered <- discipline_df |> 
+            filter(sub_group==race_name)
     }
     # This elif block only runs if there is NO 'non' in the query and the query isn't "all" or null 
     else if (str_detect(subgroup_query, regex("non", ignore_case = TRUE), negate = TRUE)) { 
@@ -81,7 +82,8 @@ head(results)
 
 LINE 146
 
-how would i write r code that looks for if the query entered no hyphen AND contains "non". if this is true, i need it to add a hyphen after the non-. here is what i have so far:
+
+fixing the gigantic function so that if subgroup_query is.null, it will default to looking only at race_name in the sub_group column - otherwise we'll get e.g. Black homeless students, Black students on SWD, etc. instead of one line per year, screwing up the population count and thereby the median
 ``` {r}
 
 ```

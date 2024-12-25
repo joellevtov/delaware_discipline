@@ -15,7 +15,11 @@ library(tidyverse)
 library(janitor)
 library(ggthemes)
 setwd('/Users/joellevtov/Library/CloudStorage/OneDrive-JoelLev-Tov/Journalism/delaware_discipline')
+# Run the below command if you need to clear your workspace
+rm(list=ls())
+```
 
+``` {r}
 # Remove comment from the below read_csv line as necessary.
 delaware_discipline <- read_csv("source_files/delaware_student_discipline_raw.csv") |> 
     clean_names() |> 
@@ -122,7 +126,7 @@ number of students of all races, write "all" (any capitalization), leave
 the argument out, or write "NULL".
 
 ```{r}
-process_race_data <- function(pop_df, discipline_df, dis_code, race_name, subgroup_query=NULL, grade_query=NULL, gender_query=NULL, disc_type=NULL) {
+process_race_data <- function(pop_df, discipline_df, dis_code, race_name=NULL, subgroup_query=NULL, grade_query=NULL, gender_query=NULL, disc_type=NULL) {
     # Function definitions
     # this function calculates the average number of incidents for each racial category
     find_num_incidents <- function(discipline_df, dis_code, race_name = NULL, subgroup_query=NULL, grade_query = NULL, gender_query = NULL, disc_type = NULL) {
@@ -148,7 +152,8 @@ process_race_data <- function(pop_df, discipline_df, dis_code, race_name, subgro
             return(filtered)
         } 
         if (is.null(subgroup_query) || str_detect(subgroup_query, regex("all", ignore_case=TRUE))){
-            filtered <- discipline_df
+            filtered <- discipline_df |> 
+                filter(sub_group==race_name)
         } 
         else if (str_detect(subgroup_query, regex("non", ignore_case = TRUE), negate = TRUE)) { 
             filtered <- discipline_df |>
@@ -193,7 +198,7 @@ process_race_data <- function(pop_df, discipline_df, dis_code, race_name, subgro
     }    
 
     # this function calculates the average number of students disciplined for the provided filters
-    find_num_disc_students <- function(discipline_df, dis_code, race_name = NULL, subgroup_query=NULL, subgroup_query=NULL, grade_query = NULL, gender_query = NULL, disc_type = NULL) {
+    find_num_disc_students <- function(discipline_df, dis_code, race_name = NULL, subgroup_query=NULL, grade_query = NULL, gender_query = NULL, disc_type = NULL) {
         filtered <- discipline_df |> 
             filter(district_code == dis_code) 
     
@@ -203,8 +208,34 @@ process_race_data <- function(pop_df, discipline_df, dis_code, race_name, subgro
         } else {
             filtered <- filtered |> 
             filter(race == race_name) 
-            # This needs to be fixed to allow users to search subgroup
-            filter(sub_group == race_name)
+        } 
+        subgroupdata <- function(subgroup_query, discipline_df) {
+        # The below function will handle any queries that have a 'non' inside of them, e.g. 'non-homeless'
+        looking_for_non <- function(subgroup_query, discipline_df) {
+            filtered <- discipline_df |> 
+                filter(str_detect(sub_group, regex(subgroup_query, ignore_case = TRUE)))
+            return(filtered)
+        } 
+        if (is.null(subgroup_query) || str_detect(subgroup_query, regex("all", ignore_case=TRUE))){
+            filtered <- discipline_df |> 
+                filter(sub_group==race_name)
+        } 
+        else if (str_detect(subgroup_query, regex("non", ignore_case = TRUE), negate = TRUE)) { 
+            filtered <- discipline_df |>
+                filter(str_detect(sub_group, regex(subgroup_query, ignore_case = TRUE)))  |>
+                filter(!str_detect(sub_group, regex("non", ignore_case = TRUE)))
+        # This else if block detects whether the query contains 'non' without a hyphen - if it does, it will add a hyphen after 'non' and run the looking_for_non function 
+        } 
+        else if (str_detect(subgroup_query, regex("non(?!-)", ignore_case = TRUE))) {
+            # Add hyphen after "non"
+            subgroup_query <- str_replace(subgroup_query, regex("non(?!-)", ignore_case = TRUE), "non-") 
+            print(subgroup_query)
+            filtered <- looking_for_non(subgroup_query, discipline_df)
+        # The else block runs in the case that there is a non already with a hyphen
+        } else {
+            filtered <- looking_for_non(subgroup_query, discipline_df)
+        }
+            return(filtered)
         }        
         if (is.null(grade_query) || tolower(grade_query) == "all") {
             filtered <- filtered |>  
@@ -229,21 +260,47 @@ process_race_data <- function(pop_df, discipline_df, dis_code, race_name, subgro
     }    
 
     # this function calculates the number of students in a given circumstance, e.g. the number of Black students in fourth grade
-    find_pop <- function(pop_df, dis_code, race_name = NULL, grade_query = NULL, gender_query = NULL, disc_type = NULL) { 
+    find_pop <- function(pop_df, dis_code, race_name = NULL, subgroup_query=NULL, grade_query = NULL, gender_query = NULL, disc_type = NULL) { 
         filtered <- pop_df |> 
             filter(district_code== dis_code)
         
         if (is.null(race_name) || tolower(race_name) == "all") {
             filtered <- filtered |> 
-            filter(race == "All Students")
+                filter(race == "All Students")
         } else {
             filtered <- filtered |> 
-            filter(race == race_name) |> 
-            filter(sub_group == race_name)
+            filter(race == race_name)
+        subgroupdata <- function(subgroup_query, pop_df) {
+            # The below function will handle any queries that have a 'non' inside of them, e.g. 'non-homeless'
+            looking_for_non <- function(subgroup_query, pop_df) {
+                filtered <- pop_df |> 
+                    filter(str_detect(sub_group, regex(subgroup_query, ignore_case = TRUE)))
+                return(filtered)
+            } 
+            if (is.null(subgroup_query) || str_detect(subgroup_query, regex("all", ignore_case=TRUE))){
+                filtered <- pop_df
+            } 
+            else if (str_detect(subgroup_query, regex("non", ignore_case = TRUE), negate = TRUE)) { 
+                filtered <- pop_df |>
+                    filter(str_detect(sub_group, regex(subgroup_query, ignore_case = TRUE)))  |>
+                    filter(!str_detect(sub_group, regex("non", ignore_case = TRUE)))
+            # This else if block detects whether the query contains 'non' without a hyphen - if it does, it will add a hyphen after 'non' and run the looking_for_non function 
+            } 
+            else if (str_detect(subgroup_query, regex("non(?!-)", ignore_case = TRUE))) {
+                # Add hyphen after "non"
+                subgroup_query <- str_replace(subgroup_query, regex("non(?!-)", ignore_case = TRUE), "non-") 
+                print(subgroup_query)
+                filtered <- looking_for_non(subgroup_query, pop_df)
+            # The else block runs in the case that there is a non already with a hyphen
+            } else {
+                filtered <- looking_for_non(subgroup_query, pop_df)
+            }
+                return(filtered)
+            } 
         }
-            if (is.null(grade_query) || tolower(grade_query) == "all") {
-            filtered <- filtered |>  
-            filter(grade == "All Students")
+        if (is.null(grade_query) || tolower(grade_query) == "all") {
+        filtered <- filtered |>  
+        filter(grade == "All Students")
         } else {
             filtered <- filtered |>  
             filter(str_detect(grade, regex(grade_query, ignore_case = TRUE)))
@@ -260,7 +317,7 @@ process_race_data <- function(pop_df, discipline_df, dis_code, race_name, subgro
     }
 
     # this function calculates the length of a discipline measure
-    length_of_discipline <- function(discipline_df, dis_code, race_name = NULL, grade_query = NULL, gender_query = NULL, disc_type = NULL) {
+    length_of_discipline <- function(discipline_df, dis_code, race_name = NULL, subgroup_query=NULL, grade_query = NULL, gender_query = NULL, disc_type = NULL) {
         filtered <- discipline_df |> 
             filter(district_code == dis_code) 
         
@@ -269,8 +326,37 @@ process_race_data <- function(pop_df, discipline_df, dis_code, race_name, subgro
             filtered <- filtered |>  
             filter(race == "All Students")
         } else {
-            filtered <- filtered |> filter(race == race_name) |> filter(sub_group == race_name)
+            filtered <- filtered |> 
+            filter(race == race_name) 
         }
+        subgroupdata <- function(subgroup_query, discipline_df) {
+        # The below function will handle any queries that have a 'non' inside of them, e.g. 'non-homeless'
+            looking_for_non <- function(subgroup_query, discipline_df) {
+                filtered <- discipline_df |> 
+                    filter(str_detect(sub_group, regex(subgroup_query, ignore_case = TRUE)))
+                return(filtered)
+            } 
+            if (is.null(subgroup_query) || str_detect(subgroup_query, regex("all", ignore_case=TRUE))){
+                filtered <- discipline_df |> 
+                    filter(sub_group==race_name)
+            } 
+            else if (str_detect(subgroup_query, regex("non", ignore_case = TRUE), negate = TRUE)) { 
+                filtered <- discipline_df |>
+                    filter(str_detect(sub_group, regex(subgroup_query, ignore_case = TRUE)))  |>
+                    filter(!str_detect(sub_group, regex("non", ignore_case = TRUE)))
+            # This else if block detects whether the query contains 'non' without a hyphen - if it does, it will add a hyphen after 'non' and run the looking_for_non function 
+            } 
+            else if (str_detect(subgroup_query, regex("non(?!-)", ignore_case = TRUE))) {
+                # Add hyphen after "non"
+                subgroup_query <- str_replace(subgroup_query, regex("non(?!-)", ignore_case = TRUE), "non-") 
+                print(subgroup_query)
+                filtered <- looking_for_non(subgroup_query, discipline_df)
+            # The else block runs in the case that there is a non already with a hyphen
+            } else {
+                filtered <- looking_for_non(subgroup_query, discipline_df)
+            }
+                return(filtered)
+            } 
         # The same is true for the grade
         if (is.null(grade_query) || tolower(grade_query) == "all") {
             filtered <- filtered |>  
@@ -295,10 +381,10 @@ process_race_data <- function(pop_df, discipline_df, dis_code, race_name, subgro
         return(median_discipline_length)
     }
 
-    num_incidents <- find_num_incidents(discipline_df, dis_code, race_name, grade_query, gender_query, disc_type)
-    num_disc_students <- find_num_disc_students(discipline_df, dis_code, race_name, grade_query, gender_query, disc_type)
-    pop <- find_pop(pop_df, dis_code, race_name, grade_query, gender_query, disc_type)
-    length_discipline <- length_of_discipline(discipline_df, dis_code, race_name, grade_query, gender_query, disc_type)
+    num_incidents <- find_num_incidents(discipline_df, dis_code, race_name, subgroup_query, grade_query, gender_query, disc_type)
+    num_disc_students <- find_num_disc_students(discipline_df, dis_code, race_name, subgroup_query, grade_query, gender_query, disc_type)
+    pop <- find_pop(pop_df, dis_code, race_name, subgroup_query, grade_query, gender_query, disc_type)
+    length_discipline <- length_of_discipline(discipline_df, dis_code, race_name, subgroup_query, grade_query, gender_query, disc_type)
 
     incidents_per_race <- data.frame (
         students_enrolled = as.numeric(pop),
@@ -309,9 +395,11 @@ process_race_data <- function(pop_df, discipline_df, dis_code, race_name, subgro
     incidents_per_race <- incidents_per_race |> 
         mutate(per_capita = as.numeric(num_incidents) / as.numeric(pop))    
 }
+```
 
+``` {r}
 # The above functions make our life a lot easier - now we just have to plug in the dataframes, the district code and the race.
-hisp_incidents <- process_race_data(delaware_pop, delaware_discipline, 0, name_hisp, "all", "all", "all") # could also leave out the "all" arguments all together and provide no arguments for grade_query, gender_query, disc_type as they are automatically set to 'null'
+hisp_incidents <- process_race_data(delaware_pop, delaware_discipline, 0, name_hisp) # could also leave out the "all" arguments all together and provide no arguments for grade_query, gender_query, disc_type as they are automatically set to 'null'
 print(hisp_incidents)
 native_am_incidents <- process_race_data(delaware_pop, delaware_discipline, 0, name_native_am, "all", "all", "all") 
 print(native_am_incidents)
@@ -397,21 +485,23 @@ name_expulsion <-"Expulsion (Permanent Removal from School)"
 First, let's tackle in-school suspension.
 
 ```{r}
-hisp_in_school_sus <- process_race_data(delaware_pop, delaware_discipline, 0, name_hisp, NULL, NULL, name_in_school_sus)
+hisp_in_school_sus <- process_race_data(pop_df=delaware_pop, discipline_df = delaware_discipline, dis_code=0, race_name = name_hisp, disc_type=name_in_school_sus)
 print(hisp_in_school_sus)
-native_am_in_school_sus <- process_race_data(delaware_pop, delaware_discipline, 0, name_native_am, NULL, NULL, name_in_school_sus)
+native_am_in_school_sus <- process_race_data(pop_df=delaware_pop, discipline_df = delaware_discipline, dis_code=0, race_name = name_native_am, disc_type=name_in_school_sus)
 print(native_am_in_school_sus)
-black_in_school_sus <- process_race_data(delaware_pop, delaware_discipline, 0, name_black, NULL, NULL, name_in_school_sus)
+black_in_school_sus <- process_race_data(pop_df=delaware_pop, discipline_df = delaware_discipline, dis_code=0, race_name = name_black, disc_type=name_in_school_sus)
 print(black_in_school_sus)
-white_in_school_sus <- process_race_data(delaware_pop, delaware_discipline, 0, name_white, NULL, NULL, name_in_school_sus)
+white_in_school_sus <- process_race_data(pop_df=delaware_pop, discipline_df = delaware_discipline, dis_code=0, race_name = name_white, disc_type=name_in_school_sus)
 print(white_in_school_sus)
-asian_am_in_school_sus <- process_race_data(delaware_pop, delaware_discipline, 0, name_asian_am, NULL, NULL, name_in_school_sus)
+asian_am_in_school_sus <- process_race_data(pop_df=delaware_pop, discipline_df = delaware_discipline, dis_code=0, race_name = name_asian_am, disc_type=name_in_school_sus)
 print(asian_am_in_school_sus)
-multi_racial_in_school_sus <- process_race_data(delaware_pop, delaware_discipline, 0, name_multi_racial, NULL, NULL, name_in_school_sus)
+multi_racial_in_school_sus <- process_race_data(pop_df=delaware_pop, discipline_df = delaware_discipline, dis_code=0, race_name = name_multi_racial, disc_type=name_in_school_sus)
 print(multi_racial_in_school_sus)
-hawaiian_pi_in_school_sus <- process_race_data(delaware_pop, delaware_discipline, 0, name_hawaiian_pi, NULL, NULL, name_in_school_sus)
+hawaiian_pi_in_school_sus <- process_race_data(pop_df=delaware_pop, discipline_df = delaware_discipline, dis_code=0, race_name = name_hawaiian_pi, disc_type=name_in_school_sus)
 print(hawaiian_pi_in_school_sus)
+```
 
+``` {r}
 in_school_suspensions <- hisp_in_school_sus |>
     full_join(native_am_in_school_sus) |>
     full_join(black_in_school_sus) |>
@@ -451,21 +541,23 @@ ggsave("renderings/in-school_discipline_rates_delaware.png", in_school_suspensio
 
 Very interesting - Black, followed by multi-racial students are most likely to face in-school discipline, considering the population. Now, let's see about out-of-school suspensions - does the trend continue?
 ```{r}
-hisp_oos_cdap <- process_race_data(delaware_pop, delaware_discipline, 0, name_hisp, NULL, NULL, name_oos_cdap)
+hisp_oos_cdap <- process_race_data(pop_df=delaware_pop, discipline_df = delaware_discipline, dis_code=0, race_name=name_hisp, disc_type=name_oos_cdap)
 print(hisp_oos_cdap)
-native_am_oos_cdap <- process_race_data(delaware_pop, delaware_discipline, 0, name_native_am, NULL, NULL, name_oos_cdap)
+native_am_oos_cdap <- process_race_data(pop_df=delaware_pop, discipline_df = delaware_discipline, dis_code=0, race_name=name_native_am, disc_type=name_oos_cdap)
 print(native_am_oos_cdap)
-black_oos_cdap <- process_race_data(delaware_pop, delaware_discipline, 0, name_black, NULL, NULL, name_oos_cdap)
+black_oos_cdap <- process_race_data(pop_df=delaware_pop, discipline_df = delaware_discipline, dis_code=0, race_name=name_black, disc_type=name_oos_cdap)
 print(black_oos_cdap)
-white_oos_cdap <- process_race_data(delaware_pop, delaware_discipline, 0, name_white, NULL, NULL, name_oos_cdap)
+white_oos_cdap <- process_race_data(pop_df=delaware_pop, discipline_df = delaware_discipline, dis_code=0, race_name=name_white, disc_type=name_oos_cdap)
 print(white_oos_cdap)
-asian_am_oos_cdap <- process_race_data(delaware_pop, delaware_discipline, 0, name_asian_am, NULL, NULL, name_oos_cdap) # this returns na, as there are no rows which document out-of-school suspensions - with or without CDAP for Asian American students. Presumably, that means there were no out-of-school suspensions for all 6,111 Asian students throughout the years. 
-print(asian_am_incidents) # this will return 'na'. don't be alarmed, that just means there weren't enough Asian American students receiving an out-of-school suspension with CDAP for Delaware to report. This means there were either no Asian American students who recieved an out-of-school suspension with CDAP or, more likely, there were only a handful of them and Delaware providing the exact number would make them potentially personally identifiable. 
-multi_racial_oos_cdap <- process_race_data(delaware_pop, delaware_discipline, 0, name_multi_racial, NULL, NULL, name_oos_cdap)
+asian_am_oos_cdap <- process_race_data(pop_df=delaware_pop, discipline_df = delaware_discipline, dis_code=0, race_name=name_asian_am, disc_type=name_oos_cdap) 
+print(asian_am_incidents) 
+multi_racial_oos_cdap <- process_race_data(pop_df=delaware_pop, discipline_df = delaware_discipline, dis_code=0, race_name=name_multi_racial, disc_type=name_oos_cdap)
 print(multi_racial_oos_cdap)
-hawaiian_pi_oos_cdap <- process_race_data(delaware_pop, delaware_discipline, 0, name_hawaiian_pi, NULL, NULL, name_oos_cdap)
+hawaiian_pi_oos_cdap <- process_race_data(pop_df=delaware_pop, discipline_df = delaware_discipline, dis_code=0, race_name=name_hawaiian_pi, disc_type=name_oos_cdap)
 print(hawaiian_pi_oos_cdap)
+```
 
+``` {r}
 out_of_school_cdap_suspensions <- hisp_oos_cdap |> 
     full_join(native_am_oos_cdap) |> 
     full_join(black_oos_cdap) |> 
@@ -496,7 +588,7 @@ out_of_school_cdap_suspensions_graph <- out_of_school_cdap_suspensions_graph |>
     ggplot() +
     geom_col(aes(x= race_ordered, y=avg_num_disc_students), fill="darkblue") +
     labs(
-        title="Black and white students are most likely to face \nout-of-school discipline without CDAP in Delaware.",
+        title="Black and white students are most likely to face \nout-of-school discipline with CDAP in Delaware.",
         x= "race",
         y="avg"
     ) +
@@ -513,14 +605,16 @@ ggsave("renderings/delaware_out_of_school_cdap_suspensions_graph.png", plot=out_
 Let's see about out-of-school suspensions without CDAP.
 
 ```{r}
-hisp_oos_wo_cdap <- process_race_data(delaware_pop, delaware_discipline, 0, name_hisp, NULL, NULL, name_oos_wo_cdap)
-native_am_oos_wo_cdap <- process_race_data(delaware_pop, delaware_discipline, 0, name_native_am, NULL, NULL, name_oos_wo_cdap)
-black_oos_wo_cdap <- process_race_data(delaware_pop, delaware_discipline, 0, name_black, NULL, NULL, name_oos_wo_cdap)
-white_oos_wo_cdap <- process_race_data(delaware_pop, delaware_discipline, 0, name_white, NULL, NULL, name_oos_wo_cdap)
-asian_am_oos_wo_cdap <- process_race_data(delaware_pop, delaware_discipline, 0, name_asian_am, NULL, NULL, name_oos_wo_cdap)
-multi_racial_oos_wo_cdap <- process_race_data(delaware_pop, delaware_discipline, 0, name_multi_racial, NULL, NULL, name_oos_wo_cdap)
-hawaiian_pi_oos_wo_cdap <- process_race_data(delaware_pop, delaware_discipline, 0, name_hawaiian_pi, NULL, NULL, name_oos_wo_cdap)
+hisp_oos_wo_cdap <- process_race_data(pop_df = delaware_pop, discipline_df = delaware_discipline, dis_code = 0, race_name = name_hisp, disc_type = name_oos_wo_cdap)
+native_am_oos_wo_cdap <- process_race_data(pop_df = delaware_pop, discipline_df = delaware_discipline, dis_code = 0, race_name = name_native_am, disc_type = name_oos_wo_cdap)
+black_oos_wo_cdap <- process_race_data(pop_df = delaware_pop, discipline_df = delaware_discipline, dis_code = 0, race_name = name_black, disc_type = name_oos_wo_cdap)
+white_oos_wo_cdap <- process_race_data(pop_df = delaware_pop, discipline_df = delaware_discipline, dis_code = 0, race_name = name_white, disc_type = name_oos_wo_cdap)
+asian_am_oos_wo_cdap <- process_race_data(pop_df = delaware_pop, discipline_df = delaware_discipline, dis_code = 0, race_name = name_asian_am, disc_type = name_oos_wo_cdap)
+multi_racial_oos_wo_cdap <- process_race_data(pop_df = delaware_pop, discipline_df = delaware_discipline, dis_code = 0, race_name = name_multi_racial, disc_type = name_oos_wo_cdap)
+hawaiian_pi_oos_wo_cdap <- process_race_data(pop_df = delaware_pop, discipline_df = delaware_discipline, dis_code = 0, race_name = name_hawaiian_pi, disc_type = name_oos_wo_cdap)
+```
 
+``` {r}
 out_of_school_wo_cdap_suspensions <- hisp_oos_wo_cdap |> 
     full_join(native_am_oos_wo_cdap) |> 
     full_join(black_oos_wo_cdap) |> 
@@ -576,7 +670,9 @@ white_oos <- process_race_data(delaware_pop, delaware_discipline, 0, name_white,
 asian_am_oos <- process_race_data(delaware_pop, delaware_discipline, 0, name_asian_am, NULL, NULL, name_oos)
 multi_racial_oos <- process_race_data(delaware_pop, delaware_discipline, 0, name_multi_racial, NULL, NULL, name_oos)
 hawaiian_pi_oos <- process_race_data(delaware_pop, delaware_discipline, 0, name_hawaiian_pi, NULL, NULL, name_oos)
+```
 
+``` {r}
 out_of_school_suspensions <- hisp_oos |> 
     full_join(native_am_oos) |> 
     full_join(black_oos) |> 
@@ -647,7 +743,9 @@ white_expulsion <- process_race_data(delaware_pop, delaware_discipline, 0, name_
 asian_am_expulsion <- process_race_data(delaware_pop, delaware_discipline, 0, name_asian_am, NULL, NULL, name_expulsion)
 multi_racial_expulsion <- process_race_data(delaware_pop, delaware_discipline, 0, name_multi_racial, NULL, NULL, name_expulsion)
 hawaiian_pi_expulsion <- process_race_data(delaware_pop, delaware_discipline, 0, name_hawaiian_pi, NULL, NULL, name_expulsion)
+```
 
+``` {r}
 expulsions <- hisp_expulsion |> 
     full_join(native_am_expulsion) |> 
     full_join(black_expulsion) |> 
