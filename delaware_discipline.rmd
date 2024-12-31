@@ -129,9 +129,9 @@ the argument out, or write "NULL".
 process_race_data <- function(pop_df, discipline_df, dis_code=NULL, race_name=NULL, subgroup=NULL, grade_query=NULL, gender_query=NULL, disc_type=NULL, schoolyear=NULL) { 
     do_analysis <- function(provided_df, dis_code=NULL, race_name=NULL, subgroup=NULL, grade_query=NULL, gender_query=NULL, disc_type=NULL, provided_column, schoolyear=NULL) {        
         
-    message("\nStarting do_analysis with column: ", provided_column)
-    message("Initial rows: ", nrow(provided_df))
-    message("Unique special_demo values before filtering: ", paste(unique(provided_df$special_demo), collapse=", "))
+    # message("\nStarting do_analysis with column: ", provided_column)
+    # message("Initial rows: ", nrow(provided_df))
+    # message("Unique special_demo values before filtering: ", paste(unique(provided_df$special_demo), collapse=", "))
         # Dis_code filter
         if (is.null(dis_code) || tolower(dis_code) == "all") {
             # If it's null or 'all', the person wants to look at discipline statewide. The function could do nothing, but leaving the field blank would not achieve that - it would be an average of statewide and of each individual district
@@ -141,11 +141,11 @@ process_race_data <- function(pop_df, discipline_df, dis_code=NULL, race_name=NU
             filtered <- provided_df |> 
             filter(district_code== dis_code)
         }
-        message("After district filter: ", nrow(filtered))
-        message("Unique special_demo values after race filter: ", paste(unique(filtered$special_demo), collapse=", "))
+        # message("After district filter: ", nrow(filtered))
+        # message("Unique special_demo values after race filter: ", paste(unique(filtered$special_demo), collapse=", "))
         
-        message("schoolyear value: ", schoolyear)
-        message("schoolyear class: ", class(schoolyear))
+        # message("schoolyear value: ", schoolyear)
+        # message("schoolyear class: ", class(schoolyear))
         # School year filter
             if (is.null(schoolyear) || str_detect(schoolyear, regex("all", ignore_case = TRUE))) {
                 over_1_year <- "yes"
@@ -155,7 +155,7 @@ process_race_data <- function(pop_df, discipline_df, dis_code=NULL, race_name=NU
                     str_split(",") |>
                     unlist() |>
                     str_trim()
-                message(years, collapse=", ")
+                # message(paste(years, collapse=", "))
                 
             # Check if all years are valid
             valid_years <- c("2015","2016","2017","2018","2019","2020","2022","2023")
@@ -172,8 +172,8 @@ process_race_data <- function(pop_df, discipline_df, dis_code=NULL, race_name=NU
                 filter(school_year==schoolyear)
             over_1_year <- "no"
         }
-        message("After school year filter: ", nrow(filtered))
-        message("Unique special_demo values after gender_query: ", paste(unique(filtered$special_demo), collapse=", "))
+        # message("After school year filter: ", nrow(filtered))
+        # message("Unique special_demo values after gender_query: ", paste(unique(filtered$special_demo), collapse=", "))
 
         # Race_name filter
         if (is.null(race_name) || tolower(race_name) == "all") {
@@ -183,8 +183,8 @@ process_race_data <- function(pop_df, discipline_df, dis_code=NULL, race_name=NU
             filtered <- filtered |> 
             filter(race == race_name)
         }
-        message("After race filter: ", nrow(filtered))
-        message("Unique special_demo values after race filter: ", paste(unique(filtered$special_demo), collapse=", "))
+        # message("After race filter: ", nrow(filtered))
+        # message("Unique special_demo values after race filter: ", paste(unique(filtered$special_demo), collapse=", "))
     
         # Grade_query filter
         if (is.null(grade_query) || str_detect(grade_query, regex("all", ignore_case = TRUE))) {
@@ -194,8 +194,8 @@ process_race_data <- function(pop_df, discipline_df, dis_code=NULL, race_name=NU
             filtered <- filtered |>  
                 filter(str_detect(grade, regex(grade_query, ignore_case = TRUE)))
         }
-        message("After grade filter: ", nrow(filtered))
-        message("Unique special_demo values after grade_query: ", paste(unique(filtered$special_demo), collapse=", "))
+        # message("After grade filter: ", nrow(filtered))
+        # message("Unique special_demo values after grade_query: ", paste(unique(filtered$special_demo), collapse=", "))
 
         # Gender_query filter
         if (is.null(gender_query) || tolower(gender_query) == "all") {
@@ -205,15 +205,15 @@ process_race_data <- function(pop_df, discipline_df, dis_code=NULL, race_name=NU
             filtered <- filtered |>  
                 filter(gender == gender_query)
         }
-        message("After gender filter: ", nrow(filtered))
-        message("Unique special_demo values after gender_query: ", paste(unique(filtered$special_demo), collapse=", "))
+        # message("After gender filter: ", nrow(filtered))
+        # message("Unique special_demo values after gender_query: ", paste(unique(filtered$special_demo), collapse=", "))
 
         # Apply filter for disc_type if provided and not "all". No "All Students" default for discipline type because there is no equivalent
         if (!is.null(disc_type) && tolower(disc_type) != "all") {
             filtered <- filtered |> 
                 filter(category == disc_type)
         } 
-        message("After discipline type filter: ", nrow(filtered))
+        # message("After discipline type filter: ", nrow(filtered))
 
         # looking_for_non function
         looking_for_non <- function(subgroup, provided_df) {
@@ -223,7 +223,7 @@ process_race_data <- function(pop_df, discipline_df, dis_code=NULL, race_name=NU
         }
         
         # special_demo filter
-        message("Unique special_demo values: ", paste(unique(filtered$special_demo), collapse=", "))
+        # message("Unique special_demo values: ", paste(unique(filtered$special_demo), collapse=", "))
         if (is.null(subgroup) || str_detect(subgroup, regex("all", ignore_case=TRUE))){
             # If a user is interested in one of the categories that isn't goverened by special_demo, like Black female first graders, this will ensure that the averages are accurate 
             # by filtering out 'All students' - that way, the number of students and the number of incidents isn't doubled
@@ -246,7 +246,7 @@ process_race_data <- function(pop_df, discipline_df, dis_code=NULL, race_name=NU
             # If the 'non' already has a hyphen
             filtered <- looking_for_non(subgroup, provided_df)
         }
-        message("After special demo filter: ", nrow(filtered))
+        # message("After special demo filter: ", nrow(filtered))
         
     # Calculating median for each aspect
     provided_column <- as.character(provided_column)
@@ -337,7 +337,7 @@ overall_graph <- overall_graph |>
     ggplot() +
     geom_col(aes(x= race_ordered, y=per_capita), fill="darkblue") +
     labs(
-        title="Black and multi-racial students are \nfar more likely to face discipline in Delaware.",
+        title="Multi-racial and Native American students are \nfar more likely to face discipline in Delaware.",
         x= "race",
         y="avg"
     ) +
@@ -411,7 +411,7 @@ in_school_suspensions_graph <- in_school_suspensions_graph |>
     ggplot() +
     geom_col(aes(x= race_ordered, y=per_capita), fill="darkblue") +
     labs(
-        title="Black and multi-racial students are far more likely to face \nin-school discipline in Delaware.",
+        title="Native American and multi-racial students are far more likely \n to face in-school discipline in Delaware.",
         x= "race",
         y="avg"
     ) +
@@ -425,7 +425,7 @@ print(in_school_suspensions_graph)
 ggsave("renderings/in-school_discipline_rates_delaware.png", in_school_suspensions_graph)
 ```
 
-Very interesting - Black, followed by multi-racial students are most likely to face in-school discipline, considering the population. Now, let's see about out-of-school suspensions - does the trend continue?
+Very interesting - Native Hawaiian/Pacific Islander students, followed by multi-racial students are most likely to face in-school discipline, considering the population. Now, let's see about out-of-school suspensions - does the trend continue?
 ```{r}
 hisp_oos_cdap <- process_race_data(pop_df=delaware_pop, discipline_df = delaware_discipline, dis_code=0, race_name=name_hisp, disc_type=name_oos_cdap)
 print(hisp_oos_cdap)
@@ -474,7 +474,7 @@ out_of_school_cdap_suspensions_graph <- out_of_school_cdap_suspensions_graph |>
     ggplot() +
     geom_col(aes(x= race_ordered, y=avg_num_disc_students), fill="darkblue") +
     labs(
-        title="Black and white students are most likely to face \nout-of-school discipline with CDAP in Delaware.",
+        title="Asian students are by far the most likely to face \nout-of-school discipline with CDAP in Delaware.",
         x= "race",
         y="avg"
     ) +
@@ -549,13 +549,13 @@ ggsave("renderings/delaware_out_of_school_wo_cdap_suspensions_graph.png", plot=o
 
 And out-of-school suspensions in total.
 ```{r}
-hisp_oos <- process_race_data(delaware_pop, delaware_discipline, 0, name_hisp, NULL, NULL, name_oos)
-native_am_oos <- process_race_data(delaware_pop, delaware_discipline, 0, name_native_am, NULL, NULL, name_oos)
-black_oos <- process_race_data(delaware_pop, delaware_discipline, 0, name_black, NULL, NULL, name_oos)
-white_oos <- process_race_data(delaware_pop, delaware_discipline, 0, name_white, NULL, NULL, name_oos)
-asian_am_oos <- process_race_data(delaware_pop, delaware_discipline, 0, name_asian_am, NULL, NULL, name_oos)
-multi_racial_oos <- process_race_data(delaware_pop, delaware_discipline, 0, name_multi_racial, NULL, NULL, name_oos)
-hawaiian_pi_oos <- process_race_data(delaware_pop, delaware_discipline, 0, name_hawaiian_pi, NULL, NULL, name_oos)
+hisp_oos <- process_race_data(pop_df = delaware_pop, discipline_df = delaware_discipline, dis_code = 0, race_name = name_hisp, disc_type = name_oos)
+native_am_oos <- process_race_data(pop_df = delaware_pop, discipline_df = delaware_discipline, dis_code = 0, race_name = name_native_am, disc_type = name_oos)
+black_oos <- process_race_data(pop_df = delaware_pop, discipline_df = delaware_discipline, dis_code = 0, race_name = name_black, disc_type = name_oos)
+white_oos <- process_race_data(pop_df = delaware_pop, discipline_df = delaware_discipline, dis_code = 0, race_name = name_white, disc_type = name_oos)
+asian_am_oos <- process_race_data(pop_df = delaware_pop, discipline_df = delaware_discipline, dis_code = 0, race_name = name_asian_am, disc_type = name_oos)
+multi_racial_oos <- process_race_data(pop_df = delaware_pop, discipline_df = delaware_discipline, dis_code = 0, race_name = name_multi_racial, disc_type = name_oos)
+hawaiian_pi_oos <- process_race_data(pop_df = delaware_pop, discipline_df = delaware_discipline, dis_code = 0, race_name = name_hawaiian_pi, disc_type = name_oos)
 ```
 
 ``` {r}
@@ -605,7 +605,7 @@ oos_graph <- oos_graph |>
     ggplot() +
     geom_col(aes(x= race_ordered, y=avg_per_capita_disciplines), fill="darkblue") +
     labs(
-        title="Black and Native American students are most likely to face out-of-school \nsuspensions in Delaware.",
+        title="Black and multi-racial students are most likely to face out-of-school \nsuspensions in Delaware.",
         x= "race",
         y="avg"
     ) +
@@ -622,13 +622,13 @@ Below, expulsion data. Note that most data is redacted because there are so few 
 ton of useful analysis that can be done.
 
 ```{r}
-hisp_expulsion <- process_race_data(delaware_pop, delaware_discipline, 0, name_hisp, NULL, NULL, name_expulsion)
-native_am_expulsion <- process_race_data(delaware_pop, delaware_discipline, 0, name_native_am, NULL, NULL, name_expulsion)
-black_expulsion <- process_race_data(delaware_pop, delaware_discipline, 0, name_black, NULL, NULL, name_expulsion)
-white_expulsion <- process_race_data(delaware_pop, delaware_discipline, 0, name_white, NULL, NULL, name_expulsion)
-asian_am_expulsion <- process_race_data(delaware_pop, delaware_discipline, 0, name_asian_am, NULL, NULL, name_expulsion)
-multi_racial_expulsion <- process_race_data(delaware_pop, delaware_discipline, 0, name_multi_racial, NULL, NULL, name_expulsion)
-hawaiian_pi_expulsion <- process_race_data(delaware_pop, delaware_discipline, 0, name_hawaiian_pi, NULL, NULL, name_expulsion)
+hisp_expulsion <- process_race_data(pop_df = delaware_pop, discipline_df = delaware_discipline, dis_code = 0, race_name = name_hisp, disc_type = name_expulsion)
+native_am_expulsion <- process_race_data(pop_df = delaware_pop, discipline_df = delaware_discipline, dis_code = 0, race_name = name_native_am, disc_type = name_expulsion)
+black_expulsion <- process_race_data(pop_df = delaware_pop, discipline_df = delaware_discipline, dis_code = 0, race_name = name_black, disc_type = name_expulsion)
+white_expulsion <- process_race_data(pop_df = delaware_pop, discipline_df = delaware_discipline, dis_code = 0, race_name = name_white, disc_type = name_expulsion)
+asian_am_expulsion <- process_race_data(pop_df = delaware_pop, discipline_df = delaware_discipline, dis_code = 0, race_name = name_asian_am, disc_type = name_expulsion)
+multi_racial_expulsion <- process_race_data(pop_df = delaware_pop, discipline_df = delaware_discipline, dis_code = 0, race_name = name_multi_racial, disc_type = name_expulsion)
+hawaiian_pi_expulsion <- process_race_data(pop_df = delaware_pop, discipline_df = delaware_discipline, dis_code = 0, race_name = name_hawaiian_pi, disc_type = name_expulsion)
 ```
 
 ``` {r}
@@ -663,17 +663,17 @@ expulsions_graph <- expulsions_graph |>
     ggplot() +
     geom_col(aes(x= race_ordered, y=avg_per_capita_disciplines), fill="darkblue") +
     labs(
-        title="Black students are most likely to face expulsions in Delaware.",
+        title="Black and white students are most likely to face expulsions in Delaware.",
         x= "race",
         y="avg"
     ) +
     theme_economist() +
     theme(
     axis.text.x = element_text(angle = 45, hjust=1, vjust=0.9, size=15),  # Adjust text angle, justification, and size
-    plot.margin = margin(t = 10, r = 10, b = 40, l = 10, unit = "pt"),  # Expand bottom margin
-    plot.title = element_text(size=25)
+    plot.margin = margin(t = 10, r = 10, b = 40, l = 10, unit = "pt")  # Expand bottom margin
     )
 print(expulsions_graph)
+
 ggsave("renderings/delaware_expulsions_graph.png", expulsions_graph)
 ```
 
@@ -776,7 +776,7 @@ median_overall_suspension_length <- length_avg |>
     ggplot(aes((x=fct_reorder(race, avg_length, .desc=TRUE)), y=avg_length)) +
     geom_col(fill="blue") +
     labs(
-        title="White students, followed by Hispanic students, get the longest \n punishments per capita",
+        title="Native American students, followed by white students, get the longest \n punishments per capita",
         x= "Race",
         y= "Length of suspension (days)") +
     theme(plot.title = element_text(size = 20, face="bold", hjust=0))
@@ -814,8 +814,8 @@ results_list <- foreach(district = district_codes, .combine = bind_rows) %dopar%
     for (category in disc_type) {
         for (race in race_names) {
             # Call the process_race_data function
-            result <- process_race_data(delaware_pop, delaware_discipline, district, race,
-                                        grade_query = NULL, gender_query = NULL, disc_type = category)
+            result <- process_race_data(pop_df = delaware_pop, discipline_df = delaware_discipline, dis_code = district, race_name = race,
+                                        disc_type = category)
 
             # Check if per_capita is NULL and replace with NA
             per_capita <- ifelse(is.null(result$per_capita), NA, result$per_capita)

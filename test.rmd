@@ -530,3 +530,24 @@ runschoolyear <- function(schoolyear, df){
 }
 print(runschoolyear("2016, 2017", delaware_discipline) |>  distinct(school_year))
 ```
+
+``` {r}
+result <- delaware_discipline |> 
+    filter(district_code==0) |> 
+    filter(race==name_hisp) |> 
+    filter(grade=="All Students") |> 
+    filter(gender=="All Students") |> 
+    filter(!special_demo==regex("All Students", ignore_case = TRUE)) |>  # Add this
+    group_by(school_year) |>
+    print() 
+    #summarize(year_median = median(na.omit(incidents))) |>
+    #ungroup() |>
+    #summarize(final_median = median(year_median))
+#print(result)
+```
+hisp_incidents <- process_race_data(pop_df = delaware_pop, discipline_df = delaware_discipline, dis_code = 0, race_name = name_hisp) # providing no arguments for grade_query, gender_query, disc_type, and subgroup as they are automatically set to 'null'
+ [1] "school_year"    "district_code"  "district"       "school_code"   
+ [5] "organization"   "race"           "gender"         "grade"         
+ [9] "special_demo"   "sub_group"      "category"       "rowstatus"     
+[13] "students"       "enrollment"     "pct_enrollment" "incidents"     
+[17] "avg_duration"
