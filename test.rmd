@@ -11,93 +11,86 @@ setwd('/Users/joellevtov/Library/CloudStorage/OneDrive-JoelLev-Tov/Journalism/de
 ``` {r}
 delaware_discipline <- read_csv("source_files/delaware_student_discipline_raw.csv") |> 
     clean_names() |> 
-    select(!geography) #the geography column reads either "All Students" or, for redacted rows, "NA" - so this will ignore the column
-delaware_discipline$sub_group <- str_replace(delaware_discipline$sub_group, regex("Asian", ignore_case = TRUE), "Asian American") 
+    select(!geography) |>  #the geography column reads either "All Students" or, for redacted rows, "NA" - so this will ignore the column 
+    select(!sub_group) # This column presents so many problems but is just a summary of all the other columns so we wil lremove it
 delaware_discipline$category <- str_replace(delaware_discipline$category, regex("Out-of-School Suspension, No CDAP Placement", ignore_case = TRUE), "Out-of-School Suspension without CDAP Placement")
 
 # The raw data has two different phrases that mean the same thing - "Out-of-School Suspension, No CDAP Placement" and "Out-of-School Suspension without CDAP Placement". For clarity, I replaced the latter with the former.
 delaware_pop <- read_csv("source_files/Student_Enrollment_20240216.csv") |> 
-    clean_names()
+    clean_names() |> 
+    select(!sub_group)
 delaware_pop$grade <- str_replace(delaware_pop$grade, regex("Twelfth", ignore_case=TRUE), "12th Grade")
-delaware_pop$sub_group <- str_replace(delaware_pop$sub_group, regex("Asian", ignore_case = TRUE), "Asian American")
 ```
 
 Non-function tests
 ``` {r}
-subgroup_test <- delaware_discipline |> 
-    filter(str_detect(sub_group, regex("homeless", ignore_case = TRUE)))
-print(subgroup_test)
-
-subgroup_test <- delaware_discipline |> 
-    filter(str_detect(sub_group, "All Students")) |> 
-    select(sub_group)
-print(subgroup_test)
-
-non_in_subgroup_query_test <- delaware_discipline |> 
-    filter(str_detect(sub_group, regex("homeless", ignore_case = TRUE))) |> 
-    filter(!str_detect(sub_group, regex("non", ignore_case = TRUE))) |> 
-    select(sub_group)
-print(non_in_subgroup_query_test)
 ```
 
-Function test
-This function will allow us to search inside the sub_group category, for example for homeless students. This one is a bit different than the other columns because the entries often have a 'non' inside, i.e. non-homeless or non-SWD. That presents a bit of a challenge because I have made the code search for anything that contains the query - think of a Cntl+F search in a PDF - it will show you anything that contains the characters you're looking for. 
 ``` {r}
-# WORK IN PROGRESS
-subgroupdata <- function(subgroup_query, race_name, pl[discipline_df) {
-    # The below function will handle any queries that have a 'non' inside of them, e.g. 'non-homeless'
-     looking_for_non <- function(subgroup_query, discipline_df) {
-        filtered <- discipline_df |> 
-            filter(str_detect(sub_group, regex(subgroup_query, ignore_case = TRUE)))
-        return(filtered)
-        }
+native_am_test <- process_race_data(pop_df=delaware_pop, discipline_df = delaware_discipline, dis_code=0, race_name=name_native_am, schoolyear="2016,2017")
+print(native_am_test)
 
-    if (is.null(subgroup_query) || str_detect(subgroup_query, regex("all", ignore_case=TRUE))){
-        filtered <- discipline_df |> 
-            filter(sub_group==race_name)
-    }
-    # This elif block only runs if there is NO 'non' in the query and the query isn't "all" or null 
-    else if (str_detect(subgroup_query, regex("non", ignore_case = TRUE), negate = TRUE)) { 
-        filtered <- discipline_df |>
-            filter(str_detect(sub_group, regex(subgroup_query, ignore_case = TRUE)))  |>
-            filter(!str_detect(sub_group, regex("non", ignore_case = TRUE)))
-    # This else if block detects whether the query contains 'non' without a hyphen - if it does, it will add a hyphen after 'non' and run the looking_for_non function 
-    } 
-    else if (str_detect(subgroup_query, regex("non(?!-)", ignore_case = TRUE))) {
-        # Add hyphen after "non"
-        subgroup_query <- str_replace(subgroup_query, regex("non(?!-)", ignore_case = TRUE), "non-") 
-        print(subgroup_query)
-        filtered <- looking_for_non(subgroup_query, discipline_df)
-    # The else block runs in the case that there is a non already with a hyphen
-} 
-else {
-    filtered <- looking_for_non(subgroup_query, discipline_df)
-}
-    return(filtered)
-} 
-results <- subgroupdata(subgroup_query="all", delaware_discipline) |> select(sub_group)
-head(results)
+hisp_test <- process_race_data(pop_df = delaware_pop, discipline_df = delaware_discipline, dis_code = 0, race_name = name_hisp) 
+print(hisp_test)
+
 ```
-
 
 LINE 146
 
+++++++ NEW +++++++++
 I think this function could be simplified a lot. It runs through the identical process for each type of discipline, it just takes the median of different columns. So wouldn't it make more sense for it to take the median of (provided_column) or something like that?
 yes, claude says, something like this would work:calculate_median <- function(df, column_name) 
     median(na.omit(df[[column_name]]))
 ``` {r}
-process_race_data <- function(pop_df, discipline_df, dis_code, race_name=NULL, subgroup_query=NULL, grade_query=NULL, gender_query=NULL, disc_type=NULL) {
-
-    do_analysis <- function(provided_df, dis_code, race_name=NULL, subgroup_query=NULL, grade_query=NULL, gender_query=NULL, disc_type=NULL) {        
+process_race_data <- function(pop_df, discipline_df, dis_code=NULL, race_name=NULL, subgroup=NULL, grade_query=NULL, gender_query=NULL, disc_type=NULL, schoolyear=NULL) { 
+    do_analysis <- function(provided_df, dis_code=NULL, race_name=NULL, subgroup=NULL, grade_query=NULL, gender_query=NULL, disc_type=NULL, provided_column, schoolyear=NULL) {        
+        
+    message("\nStarting do_analysis with column: ", provided_column)
+    message("Initial rows: ", nrow(provided_df))
+    message("Unique special_demo values before filtering: ", paste(unique(provided_df$special_demo), collapse=", "))
         # Dis_code filter
         if (is.null(dis_code) || tolower(dis_code) == "all") {
             # If it's null or 'all', the person wants to look at discipline statewide. The function could do nothing, but leaving the field blank would not achieve that - it would be an average of statewide and of each individual district
             filtered <- provided_df |> 
-            filter(district_code==0)
+                filter(district_code==0)
         } else {
+            filtered <- provided_df |> 
             filter(district_code== dis_code)
         }
+        message("After district filter: ", nrow(filtered))
+        message("Unique special_demo values after race filter: ", paste(unique(filtered$special_demo), collapse=", "))
         
+        message("schoolyear value: ", schoolyear)
+        message("schoolyear class: ", class(schoolyear))
+        # School year filter
+            if (is.null(schoolyear) || str_detect(schoolyear, regex("all", ignore_case = TRUE))) {
+                over_1_year <- "yes"
+            } else if (nchar(schoolyear) > 4) {
+                # Split by comma and trim whitespace
+                years <- schoolyear |>
+                    str_split(",") |>
+                    unlist() |>
+                    str_trim()
+                message(years, collapse=", ")
+                
+            # Check if all years are valid
+            valid_years <- c("2015","2016","2017","2018","2019","2020","2022","2023")
+            if (!all(years %in% valid_years)) {
+                invalid_years <- years[!years %in% valid_years]
+                stop("Invalid year(s): ", paste(invalid_years, collapse=", "))
+            }
+            
+            filtered <- filtered |> 
+                filter(school_year %in% years)
+            over_1_year <- "yes"
+        } else {
+            filtered <- filtered |> 
+                filter(school_year==schoolyear)
+            over_1_year <- "no"
+        }
+        message("After school year filter: ", nrow(filtered))
+        message("Unique special_demo values after gender_query: ", paste(unique(filtered$special_demo), collapse=", "))
+
         # Race_name filter
         if (is.null(race_name) || tolower(race_name) == "all") {
             filtered <- filtered |> 
@@ -105,132 +98,132 @@ process_race_data <- function(pop_df, discipline_df, dis_code, race_name=NULL, s
         } else {
             filtered <- filtered |> 
             filter(race == race_name)
-
-        # Sub_group filter
-        subgroupdata <- function(subgroup_query, provided_df) {
-            looking_for_non <- function(subgroup_query, provided_df) {
-                filtered <- provided_df |> #might have to be provided_df actually, not filtered
-                    filter(str_detect(sub_group, regex(subgroup_query, ignore_case = TRUE)))
-                return(filtered)
-            } 
-            if (is.null(subgroup_query) || str_detect(subgroup_query, regex("all", ignore_case=TRUE))){
-                filtered <- provided_df
-            } 
-            else if (str_detect(subgroup_query, regex("non", ignore_case = TRUE), negate = TRUE)) { 
-                filtered <- provided_df |>
-                    filter(str_detect(sub_group, regex(subgroup_query, ignore_case = TRUE)))  |>
-                    filter(!str_detect(sub_group, regex("non", ignore_case = TRUE)))
-            # This else if block detects whether the query contains 'non' without a hyphen - if it does, it will add a hyphen after 'non' and run the looking_for_non function 
-            } 
-            else if (str_detect(subgroup_query, regex("non(?!-)", ignore_case = TRUE))) {
-                # Add hyphen after "non"
-                subgroup_query <- str_replace(subgroup_query, regex("non(?!-)", ignore_case = TRUE), "non-") 
-                print(subgroup_query)
-                filtered <- looking_for_non(subgroup_query, provided_df)
-            # The else block runs in the case that there is a non already with a hyphen
-            } else {
-                filtered <- looking_for_non(subgroup_query, provided_df)
-            }
-                return(filtered)
-            } 
-            filtered <- filtered |> 
-                subgroupdata(subgroup_query, provided_df)
         }
-        
+        message("After race filter: ", nrow(filtered))
+        message("Unique special_demo values after race filter: ", paste(unique(filtered$special_demo), collapse=", "))
+    
         # Grade_query filter
-        if (is.null(grade_query) || tolower(grade_query) == "all") {
-            filtered <- provided_df |>  
+        if (is.null(grade_query) || str_detect(grade_query, regex("all", ignore_case = TRUE))) {
+            filtered <- filtered |>  
                 filter(grade == "All Students")
         } else {
-            filtered <- provided_df |>  
-            filter(str_detect(grade, regex(grade_query, ignore_case = TRUE)))
+            filtered <- filtered |>  
+                filter(str_detect(grade, regex(grade_query, ignore_case = TRUE)))
         }
+        message("After grade filter: ", nrow(filtered))
+        message("Unique special_demo values after grade_query: ", paste(unique(filtered$special_demo), collapse=", "))
 
         # Gender_query filter
         if (is.null(gender_query) || tolower(gender_query) == "all") {
-            filtered <- provided_df |>  
+            filtered <- filtered |>  
             filter(gender == "All Students")
         } else {
-            filtered <- provided_df |>  
-            filter(gender == gender_query)
+            filtered <- filtered |>  
+                filter(gender == gender_query)
         }
-    
-        # Calculating median
-        median_students <- median(na.omit(filtered$provided_column))
-        return(median_students)
-    }
-    provided_column <- 
-    # this function calculates the length of a discipline measure
-    length_of_discipline <- function(discipline_df, dis_code, race_name = NULL, subgroup_query=NULL, grade_query = NULL, gender_query = NULL, disc_type = NULL) {
-        median_discipline_length <- median(na.omit(filtered$avg_duration), na.rm=TRUE)
-        return(median_discipline_length)
-    }
-    # this function calculates the number of students in a given circumstance, e.g. the number of Black students in fourth grade
-    find_pop <- function(pop_df, dis_code, race_name = NULL, subgroup_query=NULL, grade_query = NULL, gender_query = NULL, disc_type = NULL) {}
+        message("After gender filter: ", nrow(filtered))
+        message("Unique special_demo values after gender_query: ", paste(unique(filtered$special_demo), collapse=", "))
 
-    num_incidents <- find_num_incidents(discipline_df, dis_code, race_name, subgroup_query, grade_query, gender_query, disc_type)
-    num_disc_students <- find_num_disc_students(discipline_df, dis_code, race_name, subgroup_query, grade_query, gender_query, disc_type)
-    pop <- find_pop(pop_df, dis_code, race_name, subgroup_query, grade_query, gender_query, disc_type)
-    length_discipline <- length_of_discipline(discipline_df, dis_code, race_name, subgroup_query, grade_query, gender_query, disc_type)
+        # Apply filter for disc_type if provided and not "all". No "All Students" default for discipline type because there is no equivalent
+        if (!is.null(disc_type) && tolower(disc_type) != "all") {
+            filtered <- filtered |> 
+                filter(category == disc_type)
+        } 
+        message("After discipline type filter: ", nrow(filtered))
+
+        # looking_for_non function
+        looking_for_non <- function(subgroup, provided_df) {
+            filtered <- filtered |> 
+                filter(str_detect(special_demo, regex(subgroup, ignore_case = TRUE)))
+            return(filtered)
+        }
+        
+        # special_demo filter
+        message("Unique special_demo values: ", paste(unique(filtered$special_demo), collapse=", "))
+        if (is.null(subgroup) || str_detect(subgroup, regex("all", ignore_case=TRUE))){
+            # If a user is interested in one of the categories that isn't goverened by special_demo, like Black female first graders, this will ensure that the averages are accurate 
+            # by filtering out 'All students' - that way, the number of students and the number of incidents isn't doubled
+            if (is.null(schoolyear) || str_detect(schoolyear, regex("all", ignore_case = TRUE))) {
+                filtered <- filtered |> 
+                    filter(!special_demo==regex("All Students", ignore_case = TRUE))
+            } else {
+            }
+        } else if (str_detect(subgroup, regex("non", ignore_case = TRUE), negate = TRUE)) {
+            # If there is a value provided like 'homeless' - filters out anything with a 'non'
+            filtered <- filtered |>
+                filter(str_detect(special_demo, regex(subgroup, ignore_case = TRUE)))  |>
+                filter(!str_detect(special_demo, regex("non", ignore_case = TRUE)))
+        } else if (str_detect(subgroup, regex("non(?!-)", ignore_case = TRUE))) {
+            # If there is a 'non' and there's no hyphen, add hyphen to make it 'non-'
+            subgroup <- str_replace(subgroup, regex("non(?!-)", ignore_case = TRUE), "non-") 
+            print(subgroup)
+            filtered <- looking_for_non(subgroup, provided_df)
+        } else {
+            # If the 'non' already has a hyphen
+            filtered <- looking_for_non(subgroup, provided_df)
+        }
+        message("After special demo filter: ", nrow(filtered))
+        
+    # Calculating median for each aspect
+    provided_column <- as.character(provided_column)
+    # message("Final number of rows before median: ", nrow(filtered))
+    # message("Values in column ", provided_column, ": ", paste(head(filtered[[provided_column]]), collapse=", "))
+    if (over_1_year=="yes") {
+        result <- filtered |>
+            group_by(school_year) |>  # First group by school year
+            summarize(year_median = median(na.omit(.data[[provided_column]]))) |>  # Get median for each year
+            ungroup() |>  # Ungroup to operate on all years
+            summarize(final_median = median(year_median)) |>  # Get median of the yearly medians
+            pull(final_median)  # Extract the final value
+    } else {
+        result <- median(na.omit(filtered[[provided_column]]))
+    }
+
+    return(result)
+    }
+
+    num_disc_students <- do_analysis(provided_df = discipline_df, dis_code=dis_code, race_name=race_name, subgroup=subgroup, grade_query=grade_query, gender_query=gender_query, disc_type=disc_type, provided_column = "students", schoolyear)
+    length_in_days <- do_analysis(provided_df = discipline_df, dis_code=dis_code, race_name=race_name, subgroup=subgroup, grade_query=grade_query, gender_query=gender_query, disc_type=disc_type, provided_column = "avg_duration", schoolyear)
+    students_enrolled <- do_analysis(provided_df = pop_df, dis_code=dis_code, race_name=race_name, subgroup=subgroup, grade_query=grade_query, gender_query=gender_query, provided_column = "students", schoolyear, disc_type=NULL)
+    median_num_incidents <- do_analysis(provided_df = discipline_df, dis_code=dis_code, race_name=race_name, subgroup=subgroup, grade_query=grade_query, gender_query=gender_query, disc_type=disc_type, provided_column = "incidents", schoolyear)
+
 
     incidents_per_race <- data.frame (
-        students_enrolled = as.numeric(pop),
+        students_enrolled = as.numeric(students_enrolled),
         num_disc_students = as.numeric(num_disc_students),
-        num_incidents = as.numeric(num_incidents),
-        length_in_days = as.numeric(length_discipline))
+        num_incidents = as.numeric(median_num_incidents),
+        length_in_days = as.numeric(length_in_days))
 
     incidents_per_race <- incidents_per_race |> 
-        mutate(per_capita = as.numeric(num_incidents) / as.numeric(pop))    
+        mutate(per_capita = as.numeric(num_incidents) / as.numeric(students_enrolled))    
 }
 ```
 
+
+++++ OLD ++++++ 
++++++ FOR COMPARISON +++++++
 ``` {r}
-subgroupdata <- function(subgroup_query, provided_df) {
-        # Instead of defining this function each and every damn time, it makes more sense to have it search the provided dataframe
-        # The below function will handle any queries that have a 'non' inside of them, e.g. 'non-homeless'
-        looking_for_non <- function(subgroup_query, provided_df) {
-            filtered <- provided_df |> 
-                filter(str_detect(sub_group, regex(subgroup_query, ignore_case = TRUE)))
-            return(filtered)
-        } 
+process_race_data_old <- function(pop_df, discipline_df, dis_code, race_name=NULL, subgroup_query=NULL, grade_query=NULL, gender_query=NULL, disc_type=NULL) {
+    message("\nStarting find_num_incidents")
+    message("Initial rows: ", nrow(discipline_df))
+    # Function definitions
     # this function calculates the average number of incidents for each racial category
     find_num_incidents <- function(discipline_df, dis_code, race_name = NULL, subgroup_query=NULL, grade_query = NULL, gender_query = NULL, disc_type = NULL) {
         # Start with filtering district_code
         filtered <- discipline_df |> 
             filter(district_code == dis_code) 
+        message("After district filter: ", nrow(filtered))
     
         # Apply filter for race_name. Defaults to "All Students" if "all" or NULL
         if (is.null(race_name) || tolower(race_name) == "all") {
             filtered <- filtered |>  
-                filter(race == "All Students")
-        } 
-        else {
+            filter(race == "All Students")
+        } else {
             filtered <- filtered |> 
-                filter(race == race_name)
+            filter(race == race_name)
         }
-        # Applying a filter for sub_group. It's mostly useless, honestly, because for most groups - even at the state level - the data on race + population is redacted (i.e., the number of e.g. homeless students who are Asian)
-        if (is.null(subgroup_query) || str_detect(subgroup_query, regex("all", ignore_case=TRUE))){
-            filtered <- discipline_df |> 
-                filter(sub_group=="All students")
-        } 
-        else if (str_detect(subgroup_query, regex("non", ignore_case = TRUE), negate = TRUE)) { 
-            filtered <- discipline_df |>
-                filter(str_detect(sub_group, regex(subgroup_query, ignore_case = TRUE)))  |>
-                filter(!str_detect(sub_group, regex("non", ignore_case = TRUE)))
-        # This else if block detects whether the query contains 'non' without a hyphen - if it does, it will add a hyphen after 'non' and run the looking_for_non function 
-        } 
-        else if (str_detect(subgroup_query, regex("non(?!-)", ignore_case = TRUE))) {
-            # Add hyphen after "non"
-            subgroup_query <- str_replace(subgroup_query, regex("non(?!-)", ignore_case = TRUE), "non-") 
-            print(subgroup_query)
-            filtered <- looking_for_non(subgroup_query, discipline_df)
-        } 
-        # The else block runs in the case that there is a non already with a hyphen
-        else {
-            filtered <- looking_for_non(subgroup_query, discipline_df)
-        }
-            return(filtered)
-        } 
+        message("After race filter: ", nrow(filtered))
+        
         # Apply filter for grade_query. Uses str_detect for partial matches in case race name isn't spelled out like database lists it. Default to "All Students" if "all" or NULL
         if (is.null(grade_query) || tolower(grade_query) == "all") {
             filtered <- filtered |>  
@@ -239,6 +232,9 @@ subgroupdata <- function(subgroup_query, provided_df) {
             filtered <- filtered |>  
             filter(str_detect(grade, regex(grade_query, ignore_case = TRUE)))
         }
+        message("After grade filter: ", nrow(filtered))
+
+
         # Apply filter for gender_query. Defaults to "All Students" if "all" or NULL
         if (is.null(gender_query) || tolower(gender_query) == "all") {
             filtered <- filtered |> 
@@ -247,10 +243,42 @@ subgroupdata <- function(subgroup_query, provided_df) {
             filtered <- filtered |> 
             filter(gender == gender_query)
         }
+        message("After gender filter: ", nrow(filtered))
+
         # Apply filter for disc_type if provided and not "all". No "All Students" default for discipline type because there is no equivalent
         if (!is.null(disc_type) && tolower(disc_type) != "all") {
             filtered <- filtered |> 
             filter(category == disc_type)
+        } 
+        message("After discipline type filter: ", nrow(filtered))
+
+        # Applying a filter for sub_group. It's mostly useless, honestly, because for most groups - even at the state level - the data on race + population is redacted (i.e., the number of e.g. homeless students who are Asian)
+        subgroupdata <- function(subgroup_query, discipline_df) {
+        # The below function will handle any queries that have a 'non' inside of them, e.g. 'non-homeless'
+        looking_for_non <- function(subgroup_query, discipline_df) {
+            filtered <- filtered |> 
+                filter(str_detect(sub_group, regex(subgroup_query, ignore_case = TRUE)))
+            return(filtered)
+        } 
+
+        if (is.null(subgroup_query) || str_detect(subgroup_query, regex("all", ignore_case=TRUE))){
+            filtered <- discipline_df |> 
+                filter(sub_group==race_name)
+        } else if (str_detect(subgroup_query, regex("non", ignore_case = TRUE), negate = TRUE)) { 
+            filtered <- discipline_df |>
+                filter(str_detect(sub_group, regex(subgroup_query, ignore_case = TRUE)))  |>
+                filter(!str_detect(sub_group, regex("non", ignore_case = TRUE)))
+        # This else if block detects whether the query contains 'non' without a hyphen - if it does, it will add a hyphen after 'non' and run the looking_for_non function 
+        } else if (str_detect(subgroup_query, regex("non(?!-)", ignore_case = TRUE))) {
+            # Add hyphen after "non"
+            subgroup_query <- str_replace(subgroup_query, regex("non(?!-)", ignore_case = TRUE), "non-") 
+            print(subgroup_query)
+            filtered <- looking_for_non(subgroup_query, discipline_df)
+        # The else block runs in the case that there is a non already with a hyphen
+        } else {
+            filtered <- looking_for_non(subgroup_query, discipline_df)
+        }
+            return(filtered)
         } 
         
         median_incidents <- median(na.omit(filtered$incidents))
@@ -316,4 +344,189 @@ subgroupdata <- function(subgroup_query, provided_df) {
         } 
         median_disc_students <- median(na.omit(filtered$students))
         return(median_disc_students)
+    }    
+
+    # this function calculates the number of students in a given circumstance, e.g. the number of Black students in fourth grade
+    find_pop <- function(pop_df, dis_code, race_name = NULL, subgroup_query=NULL, grade_query = NULL, gender_query = NULL, disc_type = NULL) { 
+        filtered <- pop_df |> 
+            filter(district_code== dis_code)
+        
+        if (is.null(race_name) || tolower(race_name) == "all") {
+            filtered <- filtered |> 
+                filter(race == "All Students")
+        } else {
+            filtered <- filtered |> 
+            filter(race == race_name)
+        }
+
+        subgroupdata <- function(subgroup_query, pop_df) {
+            # The below function will handle any queries that have a 'non' inside of them, e.g. 'non-homeless'
+            looking_for_non <- function(subgroup_query, pop_df) {
+                filtered <- pop_df |> 
+                    filter(str_detect(sub_group, regex(subgroup_query, ignore_case = TRUE)))
+                return(filtered)
+            if (is.null(subgroup_query) || str_detect(subgroup_query, regex("all", ignore_case=TRUE))){
+                filtered <- pop_df
+            } else if (str_detect(subgroup_query, regex("non", ignore_case = TRUE), negate = TRUE)) { 
+                filtered <- pop_df |>
+                    filter(str_detect(sub_group, regex(subgroup_query, ignore_case = TRUE)))  |>
+                    filter(!str_detect(sub_group, regex("non", ignore_case = TRUE)))
+            # This else if block detects whether the query contains 'non' without a hyphen - if it does, it will add a hyphen after 'non' and run the looking_for_non function 
+            } else if (str_detect(subgroup_query, regex("non(?!-)", ignore_case = TRUE))) {
+                # Add hyphen after "non"
+                subgroup_query <- str_replace(subgroup_query, regex("non(?!-)", ignore_case = TRUE), "non-") 
+                print(subgroup_query)
+                filtered <- looking_for_non(subgroup_query, pop_df)
+            # The else block runs in the case that there is a non already with a hyphen
+            } else {
+                filtered <- looking_for_non(subgroup_query, pop_df)
+            }
+            return(filtered)
+            } 
+        }
+
+        # grade_query filter
+        if (is.null(grade_query) || tolower(grade_query) == "all") {
+            filtered <- filtered |>  
+            filter(grade == "All Students")
+        } else {
+            filtered <- filtered |>  
+            filter(str_detect(grade, regex(grade_query, ignore_case = TRUE)))
+        }
+
+        #gender_query filter
+        if (is.null(gender_query) || tolower(gender_query) == "all") {
+            filtered <- filtered |>  
+            filter(gender == "All Students")
+        } else {
+            filtered <- filtered |>  
+            filter(gender == gender_query)
+        }
+
+        median_students <- median(na.omit(filtered$students))
+        return(median_students)
+    }
+
+    # this function calculates the length of a discipline measure
+    length_of_discipline <- function(discipline_df, dis_code, race_name = NULL, subgroup_query=NULL, grade_query = NULL, gender_query = NULL, disc_type = NULL) {
+        filtered <- discipline_df |> 
+            filter(district_code == dis_code) 
+        
+        # As above, will default to all students if there's no value provided
+        if (is.null(race_name) || tolower(race_name) == "all") {
+            filtered <- filtered |>  
+            filter(race == "All Students")
+        } else {
+            filtered <- filtered |> 
+            filter(race == race_name) 
+        }
+        subgroupdata <- function(subgroup_query, discipline_df) {
+        # The below function will handle any queries that have a 'non' inside of them, e.g. 'non-homeless'
+            looking_for_non <- function(subgroup_query, discipline_df) {
+                filtered <- discipline_df |> 
+                    filter(str_detect(sub_group, regex(subgroup_query, ignore_case = TRUE)))
+                return(filtered)
+            } 
+            if (is.null(subgroup_query) || str_detect(subgroup_query, regex("all", ignore_case=TRUE))){
+                filtered <- discipline_df |> 
+                    filter(sub_group==race_name)
+            } else if (str_detect(subgroup_query, regex("non", ignore_case = TRUE), negate = TRUE)) { 
+                filtered <- discipline_df |>
+                    filter(str_detect(sub_group, regex(subgroup_query, ignore_case = TRUE)))  |>
+                    filter(!str_detect(sub_group, regex("non", ignore_case = TRUE)))
+            # This else if block detects whether the query contains 'non' without a hyphen - if it does, it will add a hyphen after 'non' and run the looking_for_non function 
+            } else if (str_detect(subgroup_query, regex("non(?!-)", ignore_case = TRUE))) {
+                # Add hyphen after "non"
+                subgroup_query <- str_replace(subgroup_query, regex("non(?!-)", ignore_case = TRUE), "non-") 
+                print(subgroup_query)
+                filtered <- looking_for_non(subgroup_query, discipline_df)
+            # The else block runs in the case that there is a non already with a hyphen
+            } else {
+                filtered <- looking_for_non(subgroup_query, discipline_df)
+            }
+                return(filtered)
+        } 
+        # The same is true for the grade
+        if (is.null(grade_query) || tolower(grade_query) == "all") {
+            filtered <- filtered |>  
+            filter(grade == "All Students")
+        } else {
+            filtered <- filtered |>  filter(str_detect(grade, regex(grade_query, ignore_case = TRUE)))
+        }
+        # The same is true for the gender (note that there's only male and female in the data)
+        if (is.null(gender_query) || tolower(gender_query) == "all") {
+            filtered <- filtered |> 
+            filter(gender == "All Students")
+        } else {
+            filtered <- filtered |> 
+            filter(gender == gender_query)
+        }
+        # This filters for what type of discipline (i.e. out of school suspension, in-school suspension, etc.)
+        if (!is.null(disc_type) && tolower(disc_type) != "all") {
+            filtered <- filtered |> 
+            filter(category == disc_type)
+        } else {
+            stop("That discipline type doesn't exist.")
+        }
+        median_discipline_length <- median(na.omit(filtered$avg_duration), na.rm=TRUE)
+        return(median_discipline_length)
+    }
+
+    num_incidents <- find_num_incidents(discipline_df, dis_code, race_name, subgroup_query, grade_query, gender_query, disc_type)
+    num_disc_students <- find_num_disc_students(discipline_df, dis_code, race_name, subgroup_query, grade_query, gender_query, disc_type)
+    pop <- find_pop(pop_df, dis_code, race_name, subgroup_query, grade_query, gender_query, disc_type)
+    length_discipline <- length_of_discipline(discipline_df, dis_code, race_name, subgroup_query, grade_query, gender_query, disc_type)
+
+    incidents_per_race <- data.frame (
+        students_enrolled = as.numeric(pop),
+        num_disc_students = as.numeric(num_disc_students),
+        num_incidents = as.numeric(num_incidents),
+        length_in_days = as.numeric(length_discipline))
+
+    incidents_per_race <- incidents_per_race |> 
+        mutate(per_capita = as.numeric(num_incidents) / as.numeric(pop))    
+}
+```
+
+
+``` {r}
+colnames(delaware_discipline)
+testing_function <- delaware_discipline |> 
+    filter(district_code==0)  |> 
+    filter(school_year=="2016" | school_year=="2017") |> 
+    print() |> 
+    distinct(school_year) |> 
+    print()
+```
+
+``` {r}
+runschoolyear <- function(schoolyear, df){
+    if (is.null(schoolyear) || str_detect(schoolyear, regex("all", ignore_case = TRUE))) {
+        over_1_year <- "yes"
+    } else if (nchar(schoolyear) > 4) {
+        # Split by comma and trim whitespace
+        years <- schoolyear |>
+            str_split(",") |>
+            unlist() |>
+            str_trim()
+        message(paste(years, collapse=", "))
+            
+        # Check if all years are valid
+        valid_years <- c("2015","2016","2017","2018","2019","2020","2022","2023")
+        if (!all(years %in% valid_years)) {
+            invalid_years <- years[!years %in% valid_years]
+            stop("Invalid year(s): ", paste(invalid_years, collapse=", "))
+        }
+            
+        filtered <- df |> 
+            filter(school_year %in% years)
+        over_1_year <- "yes"
+    } else {
+        filtered <- df |> 
+            filter(school_year==schoolyear)
+        over_1_year <- "no"
+    }
+    return(filtered)
+}
+print(runschoolyear("2016, 2017", delaware_discipline) |>  distinct(school_year))
 ```
