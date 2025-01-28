@@ -544,6 +544,11 @@ result <- delaware_discipline |>
     #ungroup() |>
     #summarize(final_median = median(year_median))
 #print(result)
+unique_school_years <- as.data.frame(unique(delaware_discipline$school_year)) |>  
+    print() |> 
+    rename(school_year = 1) |> 
+    print()
+arrange(unique_school_years, desc(school_year))
 ```
 hisp_incidents <- process_race_data(pop_df = delaware_pop, discipline_df = delaware_discipline, dis_code = 0, race_name = name_hisp) # providing no arguments for grade_query, gender_query, disc_type, and subgroup as they are automatically set to 'null'
  [1] "school_year"    "district_code"  "district"       "school_code"   

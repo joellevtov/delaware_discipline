@@ -1,13 +1,12 @@
 ---
-title: "Black students are disproprotionately disciplined in Delaware"
+title: ""
 editor_options: 
   markdown: 
     wrap: 72
   chunk_output_type: inline
 ---
 
-Get started, loading & cleaning the data.
-
+Get started, loading libraries.
 ```{r setup, include=FALSE}
 # Turn off scientific notation
 options(scipen=999) 
@@ -17,8 +16,10 @@ library(ggthemes)
 setwd('/Users/joellevtov/Library/CloudStorage/OneDrive-JoelLev-Tov/Journalism/delaware_discipline')
 # Run the below command if you need to clear your workspace
 rm(list=ls())
+gc()
 ```
 
+Load dataframes.
 ``` {r}
 # Remove comment from the below read_csv line as necessary.
 delaware_discipline <- read_csv("source_files/delaware_student_discipline_raw.csv") |> 
@@ -34,7 +35,7 @@ delaware_pop$grade <- str_replace(delaware_pop$grade, regex("Twelfth", ignore_ca
 delaware_pop$sub_group <- str_replace(delaware_pop$sub_group, regex("Asian", ignore_case = TRUE), "Asian American")
 ```
 
-Let's make the racial labels easier to type.
+Make the race categories easier to type.
 ```{r}
 race_categories <- as.data.frame(unique(na.omit(delaware_discipline$race))) 
 colnames(race_categories)[1] <- "race"
@@ -73,24 +74,24 @@ print_var_name_and_value(name_hawaiian_pi)
 ```
 
 Let's break down the <delaware_discipline> dataframe. <school_year>
-shows what school year we are addressing <district_code> is a column we
-will ignore, but it shows the number code of each district. The one we
-want is 0, the state of Delaware. <district> shows in words the name of
-each district. <school_code> shows the number code of each school.
-<organization> shows the school name <race> shows what race the
-statistics address <special_demo> is a more clear version of the
-<sub_group> column. It shows what subgroup the statistics contained in
-the row are for <sub_group> shows the above in a more complicated form
--- i.e. instead of reading "ESL students", it might read
-"Hispanic/Latino/1st Grade/Out-of-School Suspension with CDAP/ESL
-students." This would be helpful, but it doesn't list all the statuses,
-e.g. what district one is looking at <category> displays what type of
-discipline was applied - in-school discipline, out-of-school discipline,
-expulsion, etc. <rowstatus> shows whether or not a row has been ommitted
-out of privacy concerns - if the pool of students is small enough, it
-would be possible to identify which students were disciplined, in theory
-<students> shows the number of STUDENTS who were disciplined with
-<category> <enrollment> shows the numer of students who fit into a
+shows the school year (2015, 2016, 2017, 2018, 2020, 2021, 2022, 2023), 
+<district_code> is a column we will ignore, but it shows the number 
+code of each district. The one we want is 0, the state of Delaware. 
+<district> shows in words the name of each district. <school_code> 
+shows the number code of each school. <organization> shows the school 
+name <race> shows what race the statistics address <special_demo> is a 
+more clear version of the <sub_group> column. It shows what subgroup 
+the statistics contained in the row are for <sub_group> shows the above 
+in a more complicated form -- i.e. instead of reading "ESL students", 
+it might read "Hispanic/Latino/1st Grade/Out-of-School Suspension with 
+CDAP/ESL students." This would be helpful, but it doesn't list all the 
+statuses, e.g. what district one is looking at <category> displays what
+type of discipline was applied - in-school discipline, out-of-school 
+discipline, expulsion, etc. <rowstatus> shows whether or not a row has 
+been ommitted out of privacy concerns - if the pool of students is small 
+enough, it would be possible to identify which students were disciplined, 
+in theory. <students> shows the number of STUDENTS who were disciplined 
+with <category>. <enrollment> shows the numer of students who fit into a
 certain <status> <pct_enrollment> shows what percent of the student body
 the studeents in <sub_group> make up <incidents> shows the number of
 times <status> was applied - e.g the number of times a student got
@@ -118,14 +119,22 @@ of a discipline measure in days
 
 The process_race_data function is a one-stop shop to calculating
 everything we could want. One can specify the following parameters: -
-District Code (this argument is mandatory) - Race (mandatory) - Grade (not mandatory; if no input defaults to "all students") - Gender (not mandatory; if no input defaults to "all students") -
-Discipline type (not mandatory: if no input, no argument is passed; i.e. in-school suspension, out-of-school suspension, expulsion) - Sub-group (not mandatory)
+District Code (this argument is mandatory) - Race (mandatory) - Grade (not mandatory; if no input, 
+defaults to "all students") - Gender (not mandatory; if no input defaults to "all students") -
+Discipline type (not mandatory: if no input, no argument is passed; i.e. in-school suspension, 
+out-of-school suspension, expulsion) - Sub-group (not mandatory) - School year (not mandatory)
 
-If interested in all students in a particular category, e.g. the average
-number of students of all races, write "all" (any capitalization), leave
-the argument out, or write "NULL".
+If interested in all students in a particular category, e.g. the average number of students of 
+all races, write "all" (any capitalization), leave the argument out, or write "NULL".
 
+The <process_race_data> function handles all these arguments.
 ```{r}
+# Detect the number of cores on your machine
+numCores <- detectCores()
+
+# Register doParallel as the backend for parallel execution
+registerDoParallel(cores = numCores - 1)  # Use one less than the total number of cores
+
 process_race_data <- function(pop_df, discipline_df, dis_code=NULL, race_name=NULL, subgroup=NULL, grade_query=NULL, gender_query=NULL, disc_type=NULL, schoolyear=NULL) { 
     do_analysis <- function(provided_df, dis_code=NULL, race_name=NULL, subgroup=NULL, grade_query=NULL, gender_query=NULL, disc_type=NULL, provided_column, schoolyear=NULL) {        
         
@@ -279,44 +288,45 @@ process_race_data <- function(pop_df, discipline_df, dis_code=NULL, race_name=NU
         length_in_days = as.numeric(length_in_days))
 
     incidents_per_race <- incidents_per_race |> 
-        mutate(per_capita = as.numeric(num_incidents) / as.numeric(students_enrolled))    
+        mutate(per_capita = as.numeric(num_incidents) / as.numeric(students_enrolled))
 }
 ```
 
+The above functions make sorting and filtering the data a lot easier - now one just has to plug in the dataframes and the district code. All other arguments are optional.
+That's what the below does.
 ``` {r}
-# The above functions make our life a lot easier - now we just have to plug in the dataframes, the district code and the race.
-hisp_incidents <- process_race_data(pop_df = delaware_pop, discipline_df = delaware_discipline, dis_code = 0, race_name = name_hisp) # providing no arguments for grade_query, gender_query, disc_type, and subgroup as they are automatically set to 'null'
-print(hisp_incidents)
-native_am_incidents <- process_race_data(pop_df=delaware_pop, discipline_df = delaware_discipline, dis_code = 0, race_name = name_native_am)
-print(native_am_incidents)
-black_incidents <- process_race_data(pop_df=delaware_pop, discipline_df = delaware_discipline, dis_code = 0, race_name = name_black)
-print(black_incidents)
-white_incidents <- process_race_data(pop_df=delaware_pop, discipline_df = delaware_discipline, dis_code = 0, race_name = name_white)
-print(white_incidents)
-asian_am_incidents <- process_race_data(pop_df=delaware_pop, discipline_df = delaware_discipline, dis_code = 0, race_name = name_asian_am)
-print(asian_am_incidents)
-multi_racial_incidents <- process_race_data(pop_df=delaware_pop, discipline_df = delaware_discipline, dis_code = 0, race_name = name_multi_racial)
-print(multi_racial_incidents)
-hawaiian_pi_incidents <- process_race_data(pop_df = delaware_pop, discipline_df = delaware_discipline, dis_code = 0, race_name = name_hawaiian_pi)
-print(hawaiian_pi_incidents)
+hisp_overall <- process_race_data(pop_df = delaware_pop, discipline_df = delaware_discipline, dis_code = 0, race_name = name_hisp) 
+print(hisp_overall)
+native_am_overall <- process_race_data(pop_df=delaware_pop, discipline_df = delaware_discipline, dis_code = 0, race_name = name_native_am)
+print(native_am_overall)
+black_overall <- process_race_data(pop_df=delaware_pop, discipline_df = delaware_discipline, dis_code = 0, race_name = name_black)
+print(black_overall)
+white_overall <- process_race_data(pop_df=delaware_pop, discipline_df = delaware_discipline, dis_code = 0, race_name = name_white)
+print(white_overall)
+asian_am_overall <- process_race_data(pop_df=delaware_pop, discipline_df = delaware_discipline, dis_code = 0, race_name = name_asian_am)
+print(asian_am_overall)
+multi_racial_overall <- process_race_data(pop_df=delaware_pop, discipline_df = delaware_discipline, dis_code = 0, race_name = name_multi_racial)
+print(multi_racial_overall)
+hawaiian_pi_overall <- process_race_data(pop_df = delaware_pop, discipline_df = delaware_discipline, dis_code = 0, race_name = name_hawaiian_pi)
+print(hawaiian_pi_overall)
 ```
 
-A word of caution - make sure no values in asian_am_incidents are 'NA'. The code
-seems to be correct but R does not consistently replace "Asian" with
+A word of caution - make sure no values in asian_am_overall are 'NA'. The code
+is correct, but R does not consistently replace "Asian" with
 "Asian American" in sub_group, it seems. If it does come up with 'NA'
 for asian_am_incidents, try quitting R, re-starting, and re-rerunning
 the code that replaces "Asian" with "Asian American" at the top. 
-Next, we're going to make a graph.
-
+Next, making a graph.
 ```{r}
 overall <- list()
-overall <- hisp_incidents |> 
-    full_join(native_am_incidents) |> 
-    full_join(black_incidents) |> 
-    full_join(white_incidents) |> 
-    full_join(asian_am_incidents) |> 
-    full_join(multi_racial_incidents) |> 
-    full_join(hawaiian_pi_incidents) |> 
+# This will combine all the results into a dataframe for graphing purposes
+overall <- hisp_overall |> 
+    full_join(native_am_overall) |> 
+    full_join(black_overall) |> 
+    full_join(white_overall) |> 
+    full_join(asian_am_overall) |> 
+    full_join(multi_racial_overall) |> 
+    full_join(hawaiian_pi_overall) |> 
     mutate(
         race=c(name_hisp, name_native_am, name_black, name_white, name_asian_am, name_multi_racial, name_hawaiian_pi)
     ) 
@@ -369,7 +379,6 @@ name_expulsion <-"Expulsion (Permanent Removal from School)"
 ```
 
 First, let's tackle in-school suspension.
-
 ```{r}
 hisp_in_school_sus <- process_race_data(pop_df=delaware_pop, discipline_df = delaware_discipline, dis_code=0, race_name = name_hisp, disc_type=name_in_school_sus)
 print(hisp_in_school_sus)
@@ -387,6 +396,7 @@ hawaiian_pi_in_school_sus <- process_race_data(pop_df=delaware_pop, discipline_d
 print(hawaiian_pi_in_school_sus)
 ```
 
+Making a graph for in-school suspensions.
 ``` {r}
 in_school_suspensions <- hisp_in_school_sus |>
     full_join(native_am_in_school_sus) |>
@@ -443,6 +453,7 @@ hawaiian_pi_oos_cdap <- process_race_data(pop_df=delaware_pop, discipline_df = d
 print(hawaiian_pi_oos_cdap)
 ```
 
+Making a graph for out-of-school suspensions with CDAP.
 ``` {r}
 out_of_school_cdap_suspensions <- hisp_oos_cdap |> 
     full_join(native_am_oos_cdap) |> 
@@ -489,7 +500,6 @@ ggsave("renderings/delaware_out_of_school_cdap_suspensions_graph.png", plot=out_
 ```
 
 Let's see about out-of-school suspensions without CDAP.
-
 ```{r}
 hisp_oos_wo_cdap <- process_race_data(pop_df = delaware_pop, discipline_df = delaware_discipline, dis_code = 0, race_name = name_hisp, disc_type = name_oos_wo_cdap)
 native_am_oos_wo_cdap <- process_race_data(pop_df = delaware_pop, discipline_df = delaware_discipline, dis_code = 0, race_name = name_native_am, disc_type = name_oos_wo_cdap)
@@ -500,6 +510,7 @@ multi_racial_oos_wo_cdap <- process_race_data(pop_df = delaware_pop, discipline_
 hawaiian_pi_oos_wo_cdap <- process_race_data(pop_df = delaware_pop, discipline_df = delaware_discipline, dis_code = 0, race_name = name_hawaiian_pi, disc_type = name_oos_wo_cdap)
 ```
 
+Making a graph for out-of-school suspensions without CDAP.
 ``` {r}
 out_of_school_wo_cdap_suspensions <- hisp_oos_wo_cdap |> 
     full_join(native_am_oos_wo_cdap) |> 
@@ -558,6 +569,7 @@ multi_racial_oos <- process_race_data(pop_df = delaware_pop, discipline_df = del
 hawaiian_pi_oos <- process_race_data(pop_df = delaware_pop, discipline_df = delaware_discipline, dis_code = 0, race_name = name_hawaiian_pi, disc_type = name_oos)
 ```
 
+Making a graph for out-of-school suspensions
 ``` {r}
 out_of_school_suspensions <- hisp_oos |> 
     full_join(native_am_oos) |> 
@@ -615,12 +627,11 @@ oos_graph <- oos_graph |>
     plot.margin = margin(t = 10, r = 10, b = 40, l = 10, unit = "pt")  # Expand bottom margin
     )
 print(oos_graph)
-ggsave("delaware_out_of_school_suspensions.png", oos_graph)
+ggsave("renderings/delaware_out_of_school_suspensions.png", oos_graph)
 ```
 
 Below, expulsion data. Note that most data is redacted because there are so few expulsions so there's not a
 ton of useful analysis that can be done.
-
 ```{r}
 hisp_expulsion <- process_race_data(pop_df = delaware_pop, discipline_df = delaware_discipline, dis_code = 0, race_name = name_hisp, disc_type = name_expulsion)
 native_am_expulsion <- process_race_data(pop_df = delaware_pop, discipline_df = delaware_discipline, dis_code = 0, race_name = name_native_am, disc_type = name_expulsion)
@@ -631,6 +642,7 @@ multi_racial_expulsion <- process_race_data(pop_df = delaware_pop, discipline_df
 hawaiian_pi_expulsion <- process_race_data(pop_df = delaware_pop, discipline_df = delaware_discipline, dis_code = 0, race_name = name_hawaiian_pi, disc_type = name_expulsion)
 ```
 
+Making a graph for expulsion data.
 ``` {r}
 expulsions <- hisp_expulsion |> 
     full_join(native_am_expulsion) |> 
@@ -677,7 +689,7 @@ print(expulsions_graph)
 ggsave("renderings/delaware_expulsions_graph.png", expulsions_graph)
 ```
 
-Black students are consistently the most likely to face discipline. Are
+ students are consistently the most likely to face discipline. Are
 they also more likely to face a longer discipline length?
 
 ``` {r}
@@ -795,7 +807,7 @@ print(disc_type)
 race_names <- unique(delaware_discipline$race)
 print(race_names)
 
-# Make sure these are installed! If not, use the install.install.packages("") function
+# Make sure these are installed! If not, use the install.packages("") function
 library(doParallel)
 library(foreach)
 
